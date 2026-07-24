@@ -19,6 +19,7 @@ import { OperatorPanel } from '../panels/operator.js';
 import { MasterPanel } from '../panels/master.js';
 import { PatchPanel } from '../components/patch-panel.js';
 import { ChannelPanel } from '../panels/channel.js';
+import { RhythmPanel } from '../panels/rhythm.js';
 import { VoiceAllocator } from '../voices.js';
 import { midiToFnumBlock, fnumBlockToFreq } from '../opll-spec.js';
 
@@ -62,6 +63,9 @@ function mount() {
   new OperatorPanel(document.getElementById('operator-car'), store, 'car', CH);
   new MasterPanel(document.getElementById('master'));
   new PatchPanel(document.getElementById('patch'), store, CH);
+
+  // Rhythm mode: 0E bit5 reinterprets channels 7-9 as the five drums.
+  new RhythmPanel(document.getElementById('rhythm'), store);
 
   // The nine-channel mixer: one strip per voice (instrument · pitch · level · Key).
   const voicesEl = document.getElementById('voices');

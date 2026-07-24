@@ -327,6 +327,41 @@ kbd {
 .chan-key:hover { background: var(--bg-hover); }
 .chan-key.on { background: var(--accent); color: #fff; border-color: var(--accent-strong); }
 
+/* --- Rhythm ------------------------------------------------------------- */
+.rhythm-section { margin-top: 1.4rem; }
+.panel-rhythm { border-top: 3px solid var(--mod); }
+.rhythm-mode { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; cursor: pointer; }
+.rhythm-mode input { accent-color: var(--mod); width: 1.05rem; height: 1.05rem; }
+.rhythm-mode-hint { color: var(--text-faint); font-weight: 400; font-size: 0.76rem; }
+.drum-pads {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 0.55rem;
+  opacity: 0.45; pointer-events: none; transition: opacity 0.15s;
+}
+.drum-pads.armed { opacity: 1; pointer-events: auto; }
+.drum-pad-cell { display: flex; flex-direction: column; gap: 0.35rem; }
+.drum-pad {
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  font: inherit; cursor: pointer; user-select: none; touch-action: none;
+  background: var(--bg-sunken); color: var(--text-dim);
+  border: 1px solid var(--border-strong); border-radius: 9px;
+  padding: 0.55rem 0.3rem 0.45rem;
+  transition: background 0.08s, color 0.08s, border-color 0.08s, transform 0.05s;
+}
+.drum-pad:hover { background: var(--bg-hover); }
+.drum-pad:active { transform: translateY(1px); }
+.drum-glyph { font-size: 1.15rem; line-height: 1; }
+.drum-name { font-size: 0.76rem; font-weight: 600; color: var(--text); }
+.drum-bit { font-family: var(--mono); font-size: 0.62rem; color: var(--text-faint); }
+.drum-pad.hit {
+  background: var(--mod); border-color: var(--mod);
+  color: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--mod) 30%, transparent);
+}
+.drum-pad.hit .drum-name, .drum-pad.hit .drum-bit { color: #fff; }
+.drum-vol { accent-color: var(--mod); }
+.rhythm-foot { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; flex-wrap: wrap; }
+.beat-btn.playing { background: var(--mod); color: #fff; border-color: var(--mod); }
+.rhythm-reg { font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); background: var(--bg-sunken); padding: 0.15rem 0.45rem; border-radius: 5px; }
+
 /* --- Footer ------------------------------------------------------------- */
 .site-footer {
   border-top: 1px solid var(--border); padding: 1rem 1.4rem;

@@ -366,5 +366,83 @@ console.log('\nNine voices (polyphony):');
     JSON.stringify(c2.effectivePatch(0)) !== JSON.stringify(c2.effectivePatch(1)));
 }
 
+// --- 13. Rhythm mode: the 6+5 drum reinterpretation (Phase 6) --------------
+// Writing 0E bit5 turns channels 7-9 into five drums keyed by 0E bits 0-4, at
+// +3 dB, leaving channels 1-6 melodic. (reference §9)
+console.log('\nRhythm mode (6 melodic + 5 drums):');
+{
+  // A rhythm kit at fixed tuning + full drum volume; render the given 0E keys.
+  function drumPeak(keyBits) {
+    const core = new OpllCore(CLOCK, SR);
+    core.writeReg(0x0e, 0x20);                              // rhythm mode on
+    core.writeReg(0x16, 100); core.writeReg(0x26, 2 << 1);  // ch7 (BD) low
+    core.writeReg(0x17, 220); core.writeReg(0x27, 5 << 1);  // ch8 (HH/SD) high
+    core.writeReg(0x18, 180); core.writeReg(0x28, 5 << 1);  // ch9 (TOM/CYM)
+    core.writeReg(0x36, 0x00); core.writeReg(0x37, 0x00); core.writeReg(0x38, 0x00); // loud
+    core.writeReg(0x0e, 0x20 | keyBits);
+    return renderPeak(core, 0, 8192);
+  }
+  const drums = [['Bass Drum', 0x10], ['Snare', 0x08], ['Tom', 0x04], ['Cymbal', 0x02], ['Hi-Hat', 0x01]];
+  let allSound = true;
+  for (const [name, bit] of drums) { const p = drumPeak(bit); if (!(p > 0.02)) { allSound = false; check(`${name} sounds`, false, `peak ${p.toFixed(4)}`); } }
+  check('all five drums produce audible output on their key bit', allSound);
+
+  // A silent-key rhythm render is quiet; keying every drum is clearly louder.
+  const idle = drumPeak(0x00), all = drumPeak(0x1f);
+  check('no drum keyed → near silence; all five keyed → audible', idle < 0.005 && all > idle * 5, `idle ${idle.toFixed(4)} → all ${all.toFixed(4)}`);
+
+  // Melodic channels 1-6 are untouched by rhythm mode: the same keyed Piano on
+  // channel 1 renders identically whether or not rhythm mode is on.
+  function ch0Peak(rhythmOn) {
+    const core = new OpllCore(CLOCK, SR);
+    core.writeReg(0x30, 0x30);                    // ch1: Piano, vol 0
+    if (rhythmOn) core.writeReg(0x0e, 0x20);
+    core.writeReg(0x10, 290); core.writeReg(0x20, (4 << 1) | (1 << 4));
+    return renderPeak(core, 0, 4096);
+  }
+  check('rhythm mode leaves melodic channels 1-6 unchanged', Math.abs(ch0Peak(false) - ch0Peak(true)) < 1e-9, `${ch0Peak(false).toFixed(4)} vs ${ch0Peak(true).toFixed(4)}`);
+
+  // In rhythm mode the ch7-9 channel-key bits are dead: keying ch7 the melodic
+  // way (20+ch key bit) produces nothing — that channel is a drum now, sounding
+  // only through 0E.
+  function ch6MelodicPeak(rhythmOn) {
+    const core = new OpllCore(CLOCK, SR);
+    core.writeReg(0x00, 0x21); core.writeReg(0x01, 0x21); core.writeReg(0x02, 0x3f); // clean carrier
+    core.writeReg(0x04, 0xf0); core.writeReg(0x05, 0xf0);
+    core.writeReg(0x06, 0x00); core.writeReg(0x07, 0x00);
+    core.writeReg(0x36, 0x00);                    // ch7 → user patch, loud
+    if (rhythmOn) core.writeReg(0x0e, 0x20);
+    core.writeReg(0x16, 290); core.writeReg(0x26, (4 << 1) | (1 << 4)); // key ch7 melodically
+    return renderPeak(core, 6, 4096);
+  }
+  check('rhythm mode ignores the ch7-9 channel key (drums keyed only via 0E)', ch6MelodicPeak(true) < 0.001 && ch6MelodicPeak(false) > 0.02, `on ${ch6MelodicPeak(true).toFixed(4)} vs off ${ch6MelodicPeak(false).toFixed(4)}`);
+
+  // The +3 dB rhythm lift: the Bass Drum (a plain 2-op voice on patch 16) is
+  // exactly RHYTHM_GAIN louder than the identical patch played melodically.
+  function bdRhythmPeak() {
+    const core = new OpllCore(CLOCK, SR);
+    core.writeReg(0x0e, 0x20); core.writeReg(0x16, 100); core.writeReg(0x26, 2 << 1); core.writeReg(0x36, 0x00);
+    core.writeReg(0x0e, 0x30);
+    return renderPeak(core, 0, 8192);
+  }
+  function bdMelodicPeak() {
+    const core = new OpllCore(CLOCK, SR);
+    const rom = OpllCore.INSTRUMENT_ROM[16];
+    for (let i = 0; i < 8; i++) core.writeReg(i, rom[i]);
+    core.writeReg(0x30, 0x00); core.writeReg(0x10, 100); core.writeReg(0x20, (2 << 1) | (1 << 4));
+    return renderPeak(core, 0, 8192);
+  }
+  const ratio = bdRhythmPeak() / bdMelodicPeak();
+  check('drums are +3 dB (RHYTHM_GAIN ≈ 1.413) over the same melodic voice', approx(ratio, OpllCore.RHYTHM_GAIN, 1e-3), `ratio ${ratio.toFixed(4)} vs ${OpllCore.RHYTHM_GAIN.toFixed(4)}`);
+
+  // The noise generator (the snare/hi-hat/cymbal grit): a 23-bit LFSR that stays
+  // balanced around zero and never collapses to the all-zero dead state.
+  const nc = new OpllCore(CLOCK, SR);
+  let plus = 0, minus = 0, zero = 0, N = 50000;
+  for (let i = 0; i < N; i++) { const v = nc.clockNoise(); if (v > 0) plus++; else minus++; if (nc.noiseReg === 0) zero++; }
+  check('noise LFSR is roughly balanced ±1', Math.abs(plus - minus) < N * 0.1, `+${plus} / −${minus}`);
+  check('noise LFSR never degenerates to all-zero', zero === 0, `zero states ${zero}`);
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);

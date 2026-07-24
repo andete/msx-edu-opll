@@ -14,9 +14,11 @@
  * internals (that would be porting the emulator, which the project forbids).
  * We model the chip; we do not copy the emulator. See reference §0, §12.
  *
- * Rhythm mode (the 6+5 drum reinterpretation and its noise generator) is a
- * separate subsystem, scheduled for Phase 6 — the melodic FM engine here is
- * the complete core the rest of the site is built on.
+ * Rhythm mode (Phase 6) — writing 0E bit5 reinterprets channels 7-9 as five
+ * percussion voices (bass drum, snare, tom, cymbal, hi-hat) driven by a shared
+ * noise LFSR, keyed by 0E bits 0-4, at +3 dB. It reuses this same FM engine (the
+ * bass drum is a plain 2-op voice); the metallic drums add a small clean-room
+ * noise/phase generator. See the "rhythm subsystem" section below and reference §9.
  */
 (function (global) {
   'use strict';
@@ -33,6 +35,7 @@
   var TL_STEP_DB = 0.75;        // modulator Total Level unit (6-bit)
   var VOL_STEP_DB = 3.0;        // carrier volume unit (4-bit) = 8 EG units
   var SL_STEP_DB = 3.0;         // sustain-level unit (4-bit)
+  var RHYTHM_GAIN = Math.pow(10, 3 / 20); // +3 dB on the drums (reference §9)
 
   // Multiple table (reference §5): register value → phase multiplier ×2
   // (so ML 0 → ×0.5, ML 1 → ×1, …). No ×11/×13/×14 exist.
@@ -151,6 +154,11 @@
     // global LFO phase (cycles)
     this.amPhase = 0;
     this.pmPhase = 0;
+    // rhythm mode (reg 0E): mode bit + the five drum key bits, and the shared
+    // noise generator that gives the snare/hi-hat/cymbal their grit.
+    this.rhythm = 0;              // last 0E value (bit5 mode, bits0-4 keys)
+    this.noiseReg = 1;           // LFSR state (must start non-zero)
+    this.noiseOut = 1;           // last noise sample as ±1
     this.reset();
   }
 
@@ -163,6 +171,7 @@
   OpllCore.EG_STEP_DB = EG_STEP_DB;
   OpllCore.TL_STEP_DB = TL_STEP_DB;
   OpllCore.VOL_STEP_DB = VOL_STEP_DB;
+  OpllCore.RHYTHM_GAIN = RHYTHM_GAIN;
 
   OpllCore.prototype.mod = function (ch) { return this.slots[ch * 2]; };
   OpllCore.prototype.car = function (ch) { return this.slots[ch * 2 + 1]; };
@@ -173,6 +182,7 @@
     this.fnum.fill(0); this.block.fill(0); this.keyOn.fill(0);
     this.sus.fill(0); this.inst.fill(0); this.vol.fill(0);
     this.amPhase = 0; this.pmPhase = 0;
+    this.rhythm = 0; this.noiseReg = 1; this.noiseOut = 1;
     for (var c = 0; c < 9; c++) this.refreshChannel(c);
   };
 
@@ -244,11 +254,12 @@
       for (var c = 0; c < 9; c++) if (this.inst[c] === 0) this.refreshChannel(c);
       return;
     }
-    if (addr === 0x0e) return; // rhythm (Phase 6)
+    if (addr === 0x0e) { this.writeRhythm(value); return; }
     if (addr >= 0x10 && addr <= 0x18) {
       var ch = addr - 0x10;
       this.fnum[ch] = (this.fnum[ch] & 0x100) | value;
-      this.refreshPitch(ch); this.refreshLevels(ch);
+      this.refreshPitch(ch);
+      if (this.rhythmOn() && ch >= 6) this.refreshRhythmLevels(); else this.refreshLevels(ch);
       return;
     }
     if (addr >= 0x20 && addr <= 0x28) {
@@ -257,7 +268,11 @@
       this.block[c2] = (value >> 1) & 7;
       this.sus[c2] = (value >> 5) & 1;
       var newKey = (value >> 4) & 1;
-      this.refreshPitch(c2); this.refreshLevels(c2);
+      this.refreshPitch(c2);
+      // In rhythm mode the ch7-9 channel-key bits are ignored — the drums are
+      // keyed through 0E — so only their pitch (drum tuning) applies here.
+      if (this.rhythmOn() && c2 >= 6) { this.refreshRhythmLevels(); return; }
+      this.refreshLevels(c2);
       this.setKey(c2, newKey);
       return;
     }
@@ -265,6 +280,9 @@
       var c3 = addr - 0x30;
       this.inst[c3] = (value >> 4) & 0x0f;
       this.vol[c3] = value & 0x0f;
+      // In rhythm mode 36/37/38 carry the drum volumes, not an instrument select
+      // — the operator patches stay the fixed rhythm ROM.
+      if (this.rhythmOn() && c3 >= 6) { this.refreshRhythmLevels(); return; }
       this.refreshChannel(c3);
       return;
     }
@@ -409,14 +427,179 @@
     return s * this.car(ch).inc * 0.008;
   };
 
+  // ---- rhythm subsystem (reference §9) ------------------------------------
+  // Writing 0E bit5 reinterprets the last three channels as five drums:
+  //
+  //   Bass Drum   ch7 (both operators)   0E bit4   — a plain 2-op FM voice
+  //   Hi-Hat      ch8 modulator slot     0E bit0   ┐ metallic: two operator
+  //   Snare Drum  ch8 carrier slot       0E bit3   │ phases + the noise LFSR,
+  //   Tom-Tom     ch9 modulator slot     0E bit2   │ each keyed and levelled
+  //   Top Cymbal  ch9 carrier slot       0E bit1   ┘ on its own.
+  //
+  // The four non-BD drums are single operator SLOTS (not paired voices), so they
+  // are synthesised directly here rather than through channelSample. Fixed ROM
+  // patches 16-18 supply their operator params; the driver still writes the drum
+  // pitch through 10-18/20-28 as usual; volumes come from the 36/37/38 nibbles.
+  //
+  // Slot indices: BD = 12/13 (ch7 mod/car), HH = 14, SD = 15 (ch8 mod/car),
+  //               TOM = 16, CYM = 17 (ch9 mod/car).
+  OpllCore.prototype.rhythmOn = function () { return (this.rhythm >> 5) & 1; };
+
+  // The five drum key bits in 0E, paired with the slot(s) each one triggers.
+  var DRUM_KEYS = [
+    { bit: 4, slots: [12, 13] }, // Bass Drum — both operators
+    { bit: 3, slots: [15] },     // Snare Drum — ch8 carrier
+    { bit: 2, slots: [16] },     // Tom-Tom — ch9 modulator
+    { bit: 1, slots: [17] },     // Top Cymbal — ch9 carrier
+    { bit: 0, slots: [14] }      // Hi-Hat — ch8 modulator
+  ];
+
+  OpllCore.prototype.writeRhythm = function (value) {
+    var prev = this.rhythm;
+    this.rhythm = value & 0x3f;
+    var on = (value >> 5) & 1, was = (prev >> 5) & 1;
+    if (on && !was) this.enterRhythm();
+    else if (!on && was) { this.exitRhythm(); return; }
+    if (!on) return;
+    // key edges: a rising drum bit re-triggers (DAMP→ATTACK), a falling one releases
+    for (var i = 0; i < DRUM_KEYS.length; i++) {
+      var d = DRUM_KEYS[i];
+      var now = (value >> d.bit) & 1, before = (prev >> d.bit) & 1;
+      if (now === before) continue;
+      for (var s = 0; s < d.slots.length; s++) this.keySlot(this.slots[d.slots[s]], now);
+    }
+  };
+
+  OpllCore.prototype.keySlot = function (slot, on) {
+    if (on) slot.egState = DAMP;                       // percussive hit
+    else if (slot.egState !== IDLE) slot.egState = RELEASE;
+  };
+
+  // Load the fixed rhythm patches into ch7-9's operators and level them.
+  OpllCore.prototype.enterRhythm = function () {
+    var bd = decodePatch(INSTRUMENT_ROM[16]);
+    this.mod(6).p = bd.mod; this.car(6).p = bd.car;
+    var hhsd = decodePatch(INSTRUMENT_ROM[17]);
+    this.slots[14].p = hhsd.mod;  // Hi-Hat
+    this.slots[15].p = hhsd.car;  // Snare
+    var tomcym = decodePatch(INSTRUMENT_ROM[18]);
+    this.slots[16].p = tomcym.mod; // Tom
+    this.slots[17].p = tomcym.car; // Cymbal
+    for (var ch = 6; ch <= 8; ch++) this.refreshPitch(ch);
+    this.refreshRhythmLevels();
+  };
+
+  // Leave rhythm mode: silence the drums and restore the melodic patches.
+  OpllCore.prototype.exitRhythm = function () {
+    this.rhythm = 0;
+    for (var i = 12; i <= 17; i++) this.slots[i].egState = IDLE;
+    for (var ch = 6; ch <= 8; ch++) this.refreshChannel(ch);
+  };
+
+  // Drum levels: the bass drum keeps the normal 2-op level chain (carrier volume
+  // + modulator TL); the four single-slot drums are direct outputs, so their
+  // volume scales at the carrier's 3 dB/step. Nibbles per reference §9:
+  //   36 = BD vol · 37 = HH(hi)/SD(lo) · 38 = TOM(hi)/CYM(lo).
+  OpllCore.prototype.refreshRhythmLevels = function () {
+    this.refreshLevels(6); // Bass Drum, via the standard channel level chain
+    var hh = (this.regs[0x37] >> 4) & 0x0f, sd = this.regs[0x37] & 0x0f;
+    var tom = (this.regs[0x38] >> 4) & 0x0f, cym = this.regs[0x38] & 0x0f;
+    this.slots[14].tll = dbToEg(hh * VOL_STEP_DB);
+    this.slots[15].tll = dbToEg(sd * VOL_STEP_DB);
+    this.slots[16].tll = dbToEg(tom * VOL_STEP_DB);
+    this.slots[17].tll = dbToEg(cym * VOL_STEP_DB);
+  };
+
+  // The noise generator: a 23-bit LFSR (feedback = bit0 ⊕ bit8), advanced once
+  // per output sample. Its polynomial is a fact about the hardware; the code is
+  // ours. Returns the current bit as ±1.
+  OpllCore.prototype.clockNoise = function () {
+    var n = this.noiseReg;
+    var fb = (n ^ (n >> 8)) & 1;
+    this.noiseReg = ((n >> 1) | (fb << 22)) >>> 0;
+    this.noiseOut = (this.noiseReg & 1) ? 1 : -1;
+    return this.noiseOut;
+  };
+
+  // The metallic square shared by hi-hat and cymbal: three inharmonic
+  // comparisons of the HH-operator (slot14) and Cymbal-operator (slot17) phase
+  // bits. A clean-room stand-in for the OPLL's phase-bit rhythm logic — enough to
+  // clang, not a cycle copy. Returns 0/1. (reference §9; teaching decision §7.3)
+  OpllCore.prototype.metallic = function () {
+    var h = ((this.slots[14].phase % 1) * SINE_LEN) & 0x3ff; // HH operator phase
+    var c = ((this.slots[17].phase % 1) * SINE_LEN) & 0x3ff; // Cymbal operator phase
+    function bit(x, b) { return (x >> b) & 1; }
+    return (bit(h, 8) ^ bit(h, 3)) | (bit(h, 7) ^ bit(c, 5)) | (bit(c, 7) ^ bit(c, 3));
+  };
+
+  // Advance one drum slot's phase and step its envelope (isCarrier=false so a
+  // single-slot drum never resets its neighbour's phase — the two drums that
+  // share a channel are independent).
+  OpllCore.prototype.advanceDrum = function (slot, ch) {
+    slot.phase += slot.inc; if (slot.phase >= 1) slot.phase -= (slot.phase | 0);
+    this.stepEnvelope(slot, ch, false);
+  };
+
+  // Sum the five drums for one sample (rhythm mode only), at +3 dB.
+  OpllCore.prototype.rhythmSample = function () {
+    this.clockNoise();
+    var metal = this.metallic();   // read both operator phases BEFORE advancing
+    var noise = this.noiseOut;
+    var out = 0;
+
+    // Bass Drum: a normal 2-op FM voice on channel 7 (patch 16).
+    out += this.channelSample(6);
+
+    // Snare Drum (ch8 carrier): a square tone from the carrier phase, flipped by
+    // the noise — a pitched, gritty crack.
+    var sd = this.slots[15];
+    if (sd.egState !== IDLE) {
+      var tone = (sd.phase % 1) < 0.5 ? 1 : -1;
+      out += (tone * noise > 0 ? 1 : -1) * 0.5 * egToGain(sd.eg + sd.tll);
+      this.advanceDrum(sd, 7);
+    }
+
+    // Tom-Tom (ch9 modulator): a plain pitched sine — the one tonal drum.
+    var tom = this.slots[16];
+    if (tom.egState !== IDLE) {
+      var wt = WAVES[tom.p.ws];
+      var ti = (((tom.phase % 1) * SINE_LEN) | 0) & (SINE_LEN - 1);
+      out += wt[ti] * egToGain(tom.eg + tom.tll);
+      this.advanceDrum(tom, 8);
+    }
+
+    // Hi-Hat (ch8 modulator): the metallic square XORed with the noise — bright
+    // and hissy.
+    var hh = this.slots[14];
+    if (hh.egState !== IDLE) {
+      var hv = (metal ^ (noise > 0 ? 1 : 0)) ? 1 : -1;
+      out += hv * 0.4 * egToGain(hh.eg + hh.tll);
+      this.advanceDrum(hh, 7);
+    }
+
+    // Top Cymbal (ch9 carrier): the same metallic square, but tonal (little
+    // noise) so it rings rather than hisses.
+    var cym = this.slots[17];
+    if (cym.egState !== IDLE) {
+      out += (metal ? 1 : -1) * 0.4 * egToGain(cym.eg + cym.tll);
+      this.advanceDrum(cym, 8);
+    }
+
+    return out * RHYTHM_GAIN;
+  };
+
   // ---- block render --------------------------------------------------------
   OpllCore.prototype.process = function (out, frames) {
     var amInc = 1.27 / this.sampleRate;
     var pmInc = 6.4 / this.sampleRate;
     for (var n = 0; n < frames; n++) {
       var acc = 0;
-      for (var ch = 0; ch < 9; ch++) acc += this.channelSample(ch);
-      // 9 carriers, each −1..1; scale to keep headroom.
+      // In rhythm mode the last three channels become the five drums; only 1-6
+      // stay melodic (6 melodic + 5 drums). Otherwise all nine are melodic.
+      var nMel = this.rhythmOn() ? 6 : 9;
+      for (var ch = 0; ch < nMel; ch++) acc += this.channelSample(ch);
+      if (this.rhythmOn()) acc += this.rhythmSample();
+      // up to 9 carriers, each −1..1; scale to keep headroom.
       out[n] = acc * 0.11;
       this.amPhase += amInc; if (this.amPhase >= 1) this.amPhase -= 1;
       this.pmPhase += pmInc; if (this.pmPhase >= 1) this.pmPhase -= 1;

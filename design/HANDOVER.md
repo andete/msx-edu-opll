@@ -1,6 +1,6 @@
 # msx-edu-opll — session handover
 
-Written 2026-07-24, at the end of **Phase 5 (nine voices)**. Read this first, then
+Written 2026-07-24, at the end of **Phase 6 (rhythm mode)**. Read this first, then
 [build-plan.md](build-plan.md) (the spec) and
 [../reference/opll-registers.md](../reference/opll-registers.md) (the chip truth).
 This project teaches the Yamaha **YM2413 (OPLL)** FM chip as a static, no-build web
@@ -11,10 +11,10 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 - **Done:** R (research/reference), D (design), 0+1 (vertical slice — one voice
   sounding), 2 (ADSR envelope + live scope), 3 (FM — the second operator),
-  4 (the whole patch + the ROM gallery), **5 (nine voices)**.
+  4 (the whole patch + the ROM gallery), 5 (nine voices), **6 (rhythm mode)**.
 - **Live sandbox:** [../index.html](../index.html) — nine polyphonic FM channels
-  (the deep-dive widgets still focus channel 1 / index 0). Serve the folder and
-  open it:
+  + the rhythm kit (the deep-dive widgets still focus channel 1 / index 0). Serve
+  the folder and open it:
   ```bash
   python3 -m http.server
   ```
@@ -23,8 +23,9 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   ```bash
   node tools/verify-core.mjs
   ```
-  **39 checks** (24 core + 5 FM + 5 patch/gallery + 5 polyphony). It asserts
-  behaviour vs [reference §12](../reference/opll-registers.md), not cycle-exact emu2413.
+  **46 checks** (24 core + 5 FM + 5 patch/gallery + 5 polyphony + 7 rhythm). It
+  asserts behaviour vs [reference §9, §12](../reference/opll-registers.md), not
+  cycle-exact emu2413.
 
 ## Architecture crib (see build-plan §2–§3 for detail)
 
@@ -44,6 +45,45 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   SharedArrayBuffer, no COOP/COEP.
 - **Knowledge layer:** [../js/opll-spec.js](../js/opll-spec.js) — register
   metadata, note↔(F-Number,Block), and (added in Phase 3) `harmonics()`.
+
+## What Phase 6 added (files)
+
+- [../js/opll-core.js](../js/opll-core.js) — the **rhythm subsystem** (search
+  "rhythm subsystem"). `writeReg(0x0e)` → `writeRhythm`: bit5 enters/leaves the
+  mode, bits0-4 key the five drums on rising/falling edges. `enterRhythm` forces
+  ch7-9's operators to ROM patches **16-18** and levels them from the drum-volume
+  nibbles (`refreshRhythmLevels`: 36 = BD · 37 = HH·hi/SD·lo · 38 = TOM·hi/CYM·lo).
+  `process` splits **6 melodic + 5 drums** when the mode is on. The **Bass Drum**
+  is a plain 2-op voice (`channelSample(6)`); **Snare/Tom/Hi-Hat/Cymbal** are
+  single-operator slots synthesised in `rhythmSample` from a 23-bit noise **LFSR**
+  (`clockNoise`) and a clean-room **metallic** phase-bit square. Drums are +3 dB
+  (`RHYTHM_GAIN`, exported). Pitch/inst writes to ch7-9 are guarded so rhythm
+  levels/patches aren't clobbered, and the ch7-9 channel-key bits are ignored in
+  rhythm mode (drums key only via `0E`).
+- [../js/panels/rhythm.js](../js/panels/rhythm.js) — the **Rhythm panel**: a mode
+  switch (`0E` bit5), five hold-to-hit **pads** (each keys its `0E` bit; two-way
+  bound so they light on any `0E` write), a **level** slider per drum → the 36/37/38
+  nibbles, and a looping **demo beat** (a 16-step groove pulsed via `setInterval`,
+  keying each hit off-then-on for a clean re-trigger). It writes drum **tuning**
+  into 16-18/26-28 once when the mode switches on. Pads are dead until rhythm mode
+  is armed.
+- [../index.html](../index.html) — the `#rhythm` section + Phase-6 note/badge.
+- [../css/styles.css](../css/styles.css) — the rhythm panel styles (mod-orange
+  accent; `.drum-pads.armed` gates the pads; `.drum-pad.hit` is the lit state).
+- [../js/pages/index.js](../js/pages/index.js) — mounts `RhythmPanel`.
+- [../tools/verify-core.mjs](../tools/verify-core.mjs) — **§13**, 7 rhythm checks
+  (five drums audible; idle-vs-all; melodic 1-6 untouched; ch7-9 channel key dead;
+  +3 dB ratio == `RHYTHM_GAIN`; noise balanced + non-degenerate).
+- **Teaching-decision note (build-plan §7.3):** the drum synthesis is modelled
+  "faithfully enough to sound right and be inspectable", **not** cycle-exact. The
+  metallic hi-hat/cymbal generator (`metallic()`) is a compact clean-room
+  phase-bit square, not the emu2413 rhythm path. The noise **polynomial** (23-bit,
+  bit0⊕bit8) is treated as hardware data (like the ROM); the code is ours.
+- **Known limitation (not a bug):** the polyphonic piano allocator
+  ([../js/voices.js](../js/voices.js)) still round-robins all nine channels, so in
+  rhythm mode it may hand a note to ch7-9 (now drums) where it stays silent —
+  effectively six melodic voices. Making the allocator rhythm-aware is a natural
+  Phase 7 (page-split) tidy-up; the core is already correct.
 
 ## What Phase 5 added (files)
 
@@ -139,8 +179,6 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 ## What's next (build-plan §5)
 
-- **Phase 6 — rhythm mode** (`0E` bit5 → 6 melodic + 5 drums + noise LFSR;
-  `writeReg` currently ignores `0x0e`, marked "Phase 6").
 - **Phase 7 — multi-page split** (`js/shell.js` registry + chrome,
   `components/signal-path.js`, landing + the seven chain pages, the Explore
   sandbox).

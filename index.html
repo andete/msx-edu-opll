@@ -24,7 +24,7 @@
       </div>
     </div>
     <div class="header-badges">
-      <span class="badge">Phase 5 · Nine voices</span>
+      <span class="badge">Phase 6 · Rhythm</span>
       <a class="badge badge-link" href="../msx-edu-psg/">PSG ↗</a>
       <a class="badge badge-link" href="../msx-edu-scc/">SCC ↗</a>
     </div>
@@ -32,14 +32,14 @@
 
   <main id="main">
     <p class="phase-note">
-      <b>Phase 5 — nine voices.</b> The OPLL is <b>nine</b> independent FM channels.
-      Press <b>Play</b> and hold a chord on the keyboard — each note is handed a free
-      voice (oldest stolen when all nine are busy), so up to nine sound at once. The
-      <b>Voices</b> mixer below gives every channel its own <b>instrument</b>,
-      <b>pitch</b> and <b>level</b>, and a <b>Key</b> button to sound it directly —
-      watch <code>10–18</code>/<code>20–28</code>/<code>30–38</code> light up per
-      channel in the register file. The detailed widgets up top still follow
-      <b>channel&nbsp;1</b>.
+      <b>Phase 6 — rhythm mode.</b> One bit — <code>0E</code> bit&nbsp;5 — turns the
+      OPLL from <b>nine melodic voices</b> into <b>six melodic + five drums</b>:
+      channels 7-9 become <b>Bass</b>, <b>Snare</b>, <b>Tom</b>, <b>Cymbal</b> and
+      <b>Hi-Hat</b>, each keyed by its own bit of <code>0E</code>, voiced by fixed
+      rhythm patches and a shared <b>noise generator</b>, mixed a touch louder
+      (+3&nbsp;dB). Press <b>Play</b>, flip <b>Rhythm mode</b> in the panel below,
+      then hit the pads or run the <b>demo beat</b> — channels&nbsp;1-6 stay melodic
+      on the keyboard. The detailed widgets up top still follow <b>channel&nbsp;1</b>.
     </p>
 
     <section class="stage">
@@ -62,6 +62,14 @@
       </div>
 
       <div id="patch"></div>
+
+      <section class="rhythm-section">
+        <h2 class="section-title">
+          Rhythm
+          <span class="section-sub">0E bit 5 — six melodic voices + five drums, at +3 dB</span>
+        </h2>
+        <div id="rhythm"></div>
+      </section>
 
       <section class="voices-section">
         <h2 class="section-title">
