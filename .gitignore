@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+*.log
+
+# Cached third-party reference material (fetch with docs/fetch.sh; see docs/SOURCES.md).
+# Not redistributed — kept local only.
+docs/datasheets/
+docs/web/
+docs/src/
