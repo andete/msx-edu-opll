@@ -116,6 +116,19 @@ h1 { font-size: 1.25rem; margin: 0; letter-spacing: -0.01em; }
 .adsr-canvas { height: 220px; }
 @media (max-width: 720px) { .viz-row { grid-template-columns: 1fr; } }
 
+/* --- Operator pair (★ the FM star widget) ------------------------------- */
+.pair-wrap { display: block; }
+.pair-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  flex-wrap: wrap; padding: 0.5rem 0.8rem;
+  background: var(--bg-panel); border-bottom: 1px solid var(--border);
+}
+.pair-title { font-weight: 650; font-size: 0.9rem; }
+.pair-arrow { color: var(--accent); font-weight: 700; }
+.pair-toggle { font-size: 0.78rem; }
+.pair-canvas { display: block; width: 100%; height: 250px; background: var(--scope-bg); }
+@media (max-width: 720px) { .pair-canvas { height: 200px; } }
+
 /* --- Panels ------------------------------------------------------------- */
 .panels {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -128,6 +141,13 @@ h1 { font-size: 1.25rem; margin: 0; letter-spacing: -0.01em; }
 }
 .panel-pitch { border-top: 3px solid var(--accent); }
 .panel-env { border-top: 3px solid var(--mod); }
+.panel-op-mod { border-top: 3px solid var(--mod); }
+.panel-op-car { border-top: 3px solid var(--accent); }
+.op-sub {
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--text-faint); border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2rem; margin-top: 0.2rem;
+}
 .chk-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-top: 0.2rem; }
 .chk { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-dim); cursor: pointer; }
 .chk input { accent-color: var(--accent); }

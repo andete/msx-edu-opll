@@ -477,6 +477,52 @@
     mod.phase = 0; car.phase = 0; mod.out = 0; car.out = 0; mod.prev = 0; car.prev = 0;
   };
 
+  // Non-destructive render for the ★ operator-pair widget (Phase 3 — FM). Runs
+  // the channel with the envelope forced OPEN (a steady timbre, visible even
+  // while the note is silent) and returns FOUR aligned windows for one channel:
+  //   modulator     — the modulator's own output (the FM *source*); its amplitude
+  //                   tracks the modulator TL, so it doubles as the link strength;
+  //   phaseOffset   — mod.out × FM_DEPTH, the phase (in cycles) the modulator
+  //                   injects into the carrier each sample — the essence of FM;
+  //   carrierClean  — the carrier as a bare sine (modulation ignored), the
+  //                   "before" trace for the show-internals overlay;
+  //   carrier       — the carrier's actual, phase-modulated output (the "after").
+  // State is saved and restored, exactly like renderScope, so audio is untouched.
+  OpllCore.prototype.renderPair = function (frames, ch) {
+    var mod = this.mod(ch), car = this.car(ch);
+    var save = {
+      mp: mod.phase, mo: mod.out, mpv: mod.prev, ms: mod.egState, me: mod.eg,
+      cp: car.phase, co: car.out, cpv: car.prev, cs: car.egState, ce: car.eg,
+      am: this.amPhase, pm: this.pmPhase
+    };
+    this.freezeEg = true;
+    this.amPhase = 0; this.pmPhase = 0;
+    this._scopeReset(mod, car);
+    mod.egState = SUSTAIN; car.egState = SUSTAIN; mod.eg = 0; car.eg = 0;
+
+    var modArr = new Float32Array(frames), carArr = new Float32Array(frames);
+    var offArr = new Float32Array(frames), cleanArr = new Float32Array(frames);
+    var cWave = WAVES[car.p.ws];
+    var cGain = egToGain(car.tll);   // envelope open: only the fixed level remains
+    var cph = 0;
+    for (var n = 0; n < frames; n++) {
+      carArr[n] = this.channelSample(ch);      // advances phases + sets mod.out
+      modArr[n] = mod.out;
+      offArr[n] = mod.out * FM_DEPTH;          // injected phase, in cycles
+      // the carrier it WOULD have been with no modulation, same freq and level
+      var ci = (cph - Math.floor(cph)) * SINE_LEN;
+      ci = ((ci | 0) % SINE_LEN + SINE_LEN) % SINE_LEN;
+      cleanArr[n] = cWave[ci] * cGain;
+      cph += car.inc;
+    }
+
+    this.freezeEg = false;
+    mod.phase = save.mp; mod.out = save.mo; mod.prev = save.mpv; mod.egState = save.ms; mod.eg = save.me;
+    car.phase = save.cp; car.out = save.co; car.prev = save.cpv; car.egState = save.cs; car.eg = save.ce;
+    this.amPhase = save.am; this.pmPhase = save.pm;
+    return { modulator: modArr, carrier: carArr, phaseOffset: offArr, carrierClean: cleanArr };
+  };
+
   OpllCore.prototype.snapshot = function (ch) {
     var mod = this.mod(ch), car = this.car(ch);
     return {

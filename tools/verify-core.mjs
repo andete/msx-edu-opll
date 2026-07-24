@@ -13,6 +13,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
+import { harmonics } from '../js/opll-spec.js';
+
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
 const OpllCore = require(join(here, '..', 'js', 'opll-core.js'));
@@ -194,6 +196,66 @@ console.log('\nFull-voice output:');
   check('a keyed Piano voice produces audible output', peak > 0.02 && peak <= 1.0, `peak ${peak.toFixed(3)}`);
   check('output stays within DAC headroom (|x| ≤ 1)', peak <= 1.0, `peak ${peak.toFixed(3)}`);
   check('RMS is non-trivial', rms > 0.002, `rms ${rms.toFixed(4)}`);
+}
+
+// --- 9. FM: the modulator enriches the carrier's harmonics ----------------
+// Render the carrier with the envelope forced open (renderPair), bin it against
+// the voice fundamental (carrier ML=1 → fundamental = its own increment), and
+// measure the energy in harmonics 2..16. A bare sine has almost none; an active
+// modulator adds a lot; feedback adds more still. (reference §6, §12.4-5)
+console.log('\nFM (modulator → carrier harmonics):');
+{
+  // Analyse channel 0 with a given user-patch setup. Returns the carrier's
+  // fundamental, its upper-harmonic energy, its spectral centroid (mean harmonic
+  // number, weighted by energy — a "brightness"), and the modulator's own
+  // upper-harmonic energy.
+  function analyze(setup) {
+    const core = new OpllCore(CLOCK, SR);
+    core.writeReg(0x30, 0x00);                 // inst 0 (user), vol 0 (loudest)
+    core.writeReg(0x01, 0x01);                 // carrier ML=1 → fundamental = base pitch
+    core.writeReg(0x03, 0x00);
+    setup(core);
+    core.writeReg(0x10, 290 & 0xff);           // F-Number low 8 bits
+    core.writeReg(0x20, (4 << 1) | ((290 >> 8) & 1)); // Block 4 + F-Number bit 8 (key off — renderPair opens the env)
+    const { carrier, modulator } = core.renderPair(2048, 0);
+    const hc = harmonics(carrier, core.car(0).inc, 16);   // carrier ML=1 → base fundamental
+    const hm = harmonics(modulator, core.mod(0).inc, 16); // modulator's own fundamental
+    const upper = (h) => { let s = 0; for (let k = 2; k <= 16; k++) s += h.mag[k] * h.mag[k]; return Math.sqrt(s); };
+    let num = 0, den = 0;
+    for (let k = 1; k <= 16; k++) { const p = hc.mag[k] * hc.mag[k]; num += k * p; den += p; }
+    return { carFund: hc.mag[1], carHigh: upper(hc), carCentroid: den ? num / den : 1, modHigh: upper(hm) };
+  }
+
+  // (a) Modulator Total Level: LOWER TL = louder modulator = deeper FM. A moderate
+  // amount of modulation must add far more upper-harmonic energy than a near-silent
+  // modulator; deeper modulation keeps pushing energy upward, so the carrier's
+  // spectral centroid rises monotonically with depth. (At extreme depth the energy
+  // spreads beyond the 16th harmonic, so we track the centroid, not raw 2..16
+  // energy, which is what stays monotone.)
+  const tlQuiet = analyze((c) => { c.writeReg(0x00, 0x02); c.writeReg(0x02, 0x3f); }); // TL 63 (near silent)
+  const tlMid = analyze((c) => { c.writeReg(0x00, 0x02); c.writeReg(0x02, 0x18); });   // TL 24 (moderate)
+  const tlLoud = analyze((c) => { c.writeReg(0x00, 0x02); c.writeReg(0x02, 0x00); });  // TL 0  (loud)
+  check('a near-silent modulator leaves the carrier ~a single harmonic (fund ≈ 1)', Math.abs(tlQuiet.carFund - 1) < 0.15, `fund ${tlQuiet.carFund.toFixed(3)}`);
+  check('an active modulator greatly enriches the carrier vs a near-silent one',
+    tlMid.carHigh > tlQuiet.carHigh * 5 && tlMid.carHigh > 0.3,
+    `high ${tlQuiet.carHigh.toFixed(3)} → ${tlMid.carHigh.toFixed(3)}`);
+  check('deeper modulation brightens the carrier (centroid TL 63<24<0)',
+    tlLoud.carCentroid > tlMid.carCentroid && tlMid.carCentroid > tlQuiet.carCentroid,
+    `centroid ${tlQuiet.carCentroid.toFixed(2)} < ${tlMid.carCentroid.toFixed(2)} < ${tlLoud.carCentroid.toFixed(2)}`);
+
+  // (b) Modulator Multiple: a higher modulator ratio pushes energy into higher
+  // harmonics — at a moderate depth the carrier's spectral centroid rises with ML.
+  const ml1 = analyze((c) => { c.writeReg(0x00, 0x01); c.writeReg(0x02, 0x18); }); // mod ×1
+  const ml2 = analyze((c) => { c.writeReg(0x00, 0x02); c.writeReg(0x02, 0x18); }); // mod ×2
+  const ml4 = analyze((c) => { c.writeReg(0x00, 0x04); c.writeReg(0x02, 0x18); }); // mod ×4
+  check('higher modulator Multiple brightens the carrier (centroid ×1<×2<×4)',
+    ml4.carCentroid > ml2.carCentroid && ml2.carCentroid > ml1.carCentroid,
+    `centroid ${ml1.carCentroid.toFixed(2)} < ${ml2.carCentroid.toFixed(2)} < ${ml4.carCentroid.toFixed(2)}`);
+
+  // (c) Feedback bends the modulator's own sine into a brighter, richer wave.
+  const noFb = analyze((c) => { c.writeReg(0x00, 0x01); c.writeReg(0x02, 0x00); c.writeReg(0x03, 0x00); });
+  const withFb = analyze((c) => { c.writeReg(0x00, 0x01); c.writeReg(0x02, 0x00); c.writeReg(0x03, 0x07); });
+  check('feedback enriches the modulator (sine → brighter wave)', withFb.modHigh > noFb.modHigh + 0.05, `modHigh ${noFb.modHigh.toFixed(4)} → ${withFb.modHigh.toFixed(3)}`);
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);

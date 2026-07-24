@@ -92,6 +92,54 @@ export const REGISTER_GROUPS = [
   },
 ];
 
+// --- Harmonic analysis (the FM payoff) -------------------------------------
+
+/**
+ * The harmonic spectrum of a rendered carrier window, relative to the voice's
+ * fundamental. Unlike the SCC's fixed 32-point cycle, an FM carrier is an
+ * arbitrary audio window whose fundamental (the F-Number × Block base pitch, at
+ * Multiple 1) rarely lands on an integer DFT bin — so instead of an FFT we
+ * project the signal directly onto each harmonic frequency k·f0 (a bank of
+ * Goertzel-style correlations). A Hann window suppresses the leakage from the
+ * finite, non-integer-period record, giving stable bars as ML/TL/FB move.
+ *
+ * @param {Float32Array} samples  the carrier output over a window
+ * @param {number} f0             fundamental, in CYCLES PER SAMPLE
+ * @param {number} nHarm          how many harmonics to return (default 16)
+ * @returns {{mag: Float64Array}}  mag[1..nHarm], ≈ amplitude of each harmonic
+ */
+export function harmonics(samples, f0, nHarm = 16) {
+  const N = samples.length;
+  const mag = new Float64Array(nHarm + 1);
+  if (!(f0 > 0) || N < 2) return { mag };
+
+  // A 4-term Blackman–Harris window (≈ −92 dB sidelobes). The fundamental is
+  // strong and its record is never an integer number of periods, so a weaker
+  // window would leak it into the low harmonic bins (a pure sine would show a
+  // spurious 2nd/3rd bar); this keeps a pure sine reading as a single bar.
+  const win = new Float64Array(N);
+  let wsum = 0;
+  const a0 = 0.35875, a1 = 0.48829, a2 = 0.14128, a3 = 0.01168;
+  for (let n = 0; n < N; n++) {
+    const t = (2 * Math.PI * n) / (N - 1);
+    win[n] = a0 - a1 * Math.cos(t) + a2 * Math.cos(2 * t) - a3 * Math.cos(3 * t);
+    wsum += win[n];
+  }
+
+  for (let k = 1; k <= nHarm; k++) {
+    const w = 2 * Math.PI * k * f0;
+    if (w >= Math.PI) break;               // above Nyquist: leave at 0
+    let re = 0, im = 0;
+    for (let n = 0; n < N; n++) {
+      const s = samples[n] * win[n];
+      re += s * Math.cos(w * n);
+      im += s * Math.sin(w * n);
+    }
+    mag[k] = (2 / wsum) * Math.hypot(re, im);   // ≈ amplitude of a pure harmonic
+  }
+  return { mag };
+}
+
 /** Human-readable label for a single address (for tooltips). */
 export function addrLabel(addr) {
   for (const g of REGISTER_GROUPS) {

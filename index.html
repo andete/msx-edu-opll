@@ -24,7 +24,7 @@
       </div>
     </div>
     <div class="header-badges">
-      <span class="badge">Phase 2 · envelope</span>
+      <span class="badge">Phase 3 · FM</span>
       <a class="badge badge-link" href="../msx-edu-psg/">PSG ↗</a>
       <a class="badge badge-link" href="../msx-edu-scc/">SCC ↗</a>
     </div>
@@ -32,17 +32,20 @@
 
   <main id="main">
     <p class="phase-note">
-      <b>Phase 2 — the ADSR envelope.</b> Still one pure sine (the modulator is
-      silenced — FM arrives next), but now shaped by a real <b>Attack · Decay ·
-      Sustain · Release</b> envelope. Press <b>Play</b>, hold a key and watch the
-      playhead climb, decay and hold; let go to hear it release. Note the tiny
-      <em>damp</em> dip at the very start of every Key-On — an OPLL quirk.
+      <b>Phase 3 — FM: the second operator.</b> Now the <b>modulator</b> is live:
+      it phase-modulates the carrier, and that is <em>FM synthesis</em>. Press
+      <b>Play</b>, hold a key, and sweep the modulator's <b>Multiple</b>,
+      <b>Total level</b> and <b>Feedback</b>: hear the timbre change and watch the
+      carrier's <b>harmonic bars</b> grow. A <b>2:1</b> Multiple ratio rings like a
+      bell. Flip <b>show internals</b> to see the phase the modulator injects.
     </p>
 
     <section class="stage">
+      <div id="pair" class="scope-wrap"></div>
+
       <div class="viz-row">
-        <div class="scope-wrap viz-scope">
-          <canvas id="scope" class="scope"></canvas>
+        <div class="scope-wrap">
+          <canvas id="harmonics" class="scope"></canvas>
         </div>
         <div class="scope-wrap viz-adsr">
           <canvas id="adsr" class="scope adsr-canvas"></canvas>
@@ -51,7 +54,8 @@
 
       <div class="panels">
         <div id="pitch"></div>
-        <div id="operator"></div>
+        <div id="operator-mod"></div>
+        <div id="operator-car"></div>
         <div id="master"></div>
       </div>
 
