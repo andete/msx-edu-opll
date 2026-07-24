@@ -682,6 +682,70 @@ a.chain-card-link:hover { border-color: var(--accent); background: var(--bg-hove
   .calc-grid { grid-template-columns: 1fr; }
 }
 
+/* === Tune page (the VGM player) ======================================== */
+.loader { display: flex; flex-direction: column; gap: 0.7rem; }
+.drop-zone {
+  border: 2px dashed var(--border-strong); border-radius: 12px;
+  padding: 1.6rem 1.2rem; text-align: center; background: var(--bg-sunken);
+  transition: border-color 0.15s, background 0.15s;
+}
+.drop-zone.over { border-color: var(--accent); background: var(--accent-soft); }
+.drop-main { margin: 0 0 0.3rem; font-size: 1rem; font-weight: 600; }
+.drop-sub { margin: 0; font-size: 0.8rem; color: var(--text-dim); }
+.link-btn {
+  font: inherit; font-size: inherit; background: none; border: none; padding: 0;
+  color: var(--accent-strong); font-weight: 650; cursor: pointer; text-decoration: underline;
+}
+.loader-alt { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; }
+.loader-note { font-size: 0.76rem; color: var(--text-faint); max-width: 62ch; line-height: 1.5; }
+.loader-note code { font-family: var(--mono); font-size: 0.9em; }
+.load-error {
+  margin: 0; padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.82rem;
+  background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text);
+}
+
+#nowPlaying { display: flex; flex-direction: column; gap: 1.1rem; }
+.tune-head { display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; justify-content: space-between; }
+.tune-title { margin: 0; font-size: 1.15rem; }
+.tune-sub { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--text-dim); }
+.tune-chips { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.chip-tag {
+  font-size: 0.7rem; font-family: var(--mono); padding: 0.2rem 0.5rem;
+  border-radius: 999px; background: var(--bg-sunken);
+  border: 1px solid var(--border); color: var(--text-faint);
+}
+.chip-tag.is-ours { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); font-weight: 650; }
+.chip-tag.is-warn { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text); }
+
+.transport { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.seek {
+  flex: 1; min-width: 120px; height: 6px; border-radius: 999px;
+  background: var(--bg-sunken); border: 1px solid var(--border); overflow: hidden;
+}
+.seek-fill { display: block; height: 100%; width: 0; background: var(--accent); }
+.tune-time { font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim); }
+
+.activity { border: 1px solid var(--border); border-radius: 12px; padding: 0.8rem 1rem; background: var(--bg-panel); }
+.activity-head {
+  margin: 0 0 0.6rem; font-size: 0.9rem;
+  display: flex; align-items: baseline; gap: 0.6rem; justify-content: space-between; flex-wrap: wrap;
+}
+.activity-rate { font-family: var(--mono); font-size: 0.78rem; color: var(--accent-strong); font-weight: 650; }
+.activity-bars { display: flex; flex-direction: column; gap: 0.3rem; }
+.activity-row { display: grid; grid-template-columns: 6rem 1fr 2.6rem auto; align-items: center; gap: 0.5rem; }
+.activity-label { font-size: 0.76rem; color: var(--text-dim); font-weight: 600; }
+.activity-track { height: 10px; border-radius: 999px; background: var(--bg-sunken); overflow: hidden; }
+.activity-fill { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.1s linear; }
+.activity-n { font-family: var(--mono); font-size: 0.72rem; color: var(--text-faint); text-align: right; }
+.activity-hint { font-size: 0.7rem; color: var(--text-faint); }
+.activity-note { margin: 0.6rem 0 0; font-size: 0.75rem; color: var(--text-faint); line-height: 1.55; max-width: 74ch; }
+.activity-note code { font-family: var(--mono); font-size: 0.9em; }
+
+@media (max-width: 680px) {
+  .activity-row { grid-template-columns: 5rem 1fr 2.4rem; }
+  .activity-hint { display: none; }
+}
+
 /* --- Footer ------------------------------------------------------------- */
 .site-footer {
   border-top: 1px solid var(--border); padding: 1rem 1.4rem;

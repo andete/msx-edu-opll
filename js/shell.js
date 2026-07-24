@@ -70,6 +70,13 @@ export const PAGES = [
     lede: 'The whole chip, every widget, all nine voices',
   },
   {
+    id: 'tune', title: 'Tune', href: 'tune.html',
+    lede: 'Play a real VGM recording and watch the driver work',
+    // The one page with a transport of its own (a tune's play/pause/rewind), so
+    // the shell's header Play button and play-on-edit are both suppressed here.
+    transport: false,
+  },
+  {
     id: 'reference', title: 'Reference', href: 'reference.html',
     lede: 'Register map, the instrument ROM, calculators, sources',
   },
@@ -127,6 +134,9 @@ function headerHTML(current) {
   };
   const chain = CHAIN.map(link).join('');
   const outside = PAGES.filter((p) => !p.chain && p.id !== 'index').map(link).join('');
+  // A page that carries its own transport (the Tune player) hides the header's,
+  // so there are not two competing play buttons for two different things.
+  const ownsTransport = pageById(current)?.transport === false;
 
   return `
     <div class="brand">
@@ -142,9 +152,10 @@ function headerHTML(current) {
       <div class="nav-group">${chain}</div>
       <div class="nav-group nav-group-alt">${outside}</div>
     </nav>
+    ${ownsTransport ? '' : `
     <div class="header-actions">
       <button type="button" class="btn btn-play btn-transport" data-transport>▶ Play</button>
-    </div>`;
+    </div>`}`;
 }
 
 function footerHTML() {
@@ -233,7 +244,9 @@ export function mountShell(pageId, opts = {}) {
     onPlayState(sync);
     sync(isPlaying());
   }
-  armAudioOnEdit();
+  // Pages that carry their own transport (the Tune player) drive playback
+  // themselves; everywhere else, editing a parameter starts the chip.
+  if (page?.transport !== false) armAudioOnEdit();
 
   const footer = document.querySelector('[data-shell-footer]');
   if (footer) { footer.className = 'site-footer'; footer.innerHTML = footerHTML(); }

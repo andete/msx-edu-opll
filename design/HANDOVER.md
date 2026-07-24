@@ -1,10 +1,9 @@
 # msx-edu-opll — session handover
 
-Written 2026-07-24, at the end of **Phase 8 (MSX code view + Reference +
-polish)** — the site is now feature-complete against the build plan (only the
-deferred VGM player remains). Read this first, then [build-plan.md](build-plan.md)
-(the spec) and [../reference/opll-registers.md](../reference/opll-registers.md)
-(the chip truth).
+Written 2026-07-24, at the end of the **VGM tune player** — the last planned
+feature. The site is now **complete** against the build plan. Read this first,
+then [build-plan.md](build-plan.md) (the spec) and
+[../reference/opll-registers.md](../reference/opll-registers.md) (the chip truth).
 This project teaches the Yamaha **YM2413 (OPLL)** FM chip as a static, no-build web
 app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 [../../msx-edu-meta/META-PLAN.md](../../msx-edu-meta/META-PLAN.md).
@@ -14,14 +13,16 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 - **Done:** R (research/reference), D (design), 0+1 (vertical slice — one voice
   sounding), 2 (ADSR envelope + live scope), 3 (FM — the second operator),
   4 (the whole patch + the ROM gallery), 5 (nine voices), 6 (rhythm mode),
-  7 (the multi-page split), **8 (MSX code view + Reference + polish)**. All eight
-  build phases are complete; only the deferred VGM player remains (see below).
+  7 (the multi-page split), 8 (MSX code view + Reference + polish), **the VGM tune
+  player**. All build phases AND the deferred VGM player are done — the site is
+  complete.
 - **Live site:** serve the folder and open [../index.html](../index.html) (the
   landing page). The chain is [Tone](../tone.html) → [Envelope](../envelope.html)
   → [FM](../fm.html) → [Instrument](../instrument.html) → [Voices](../voices.html)
   → [Rhythm](../rhythm.html) → [MSX](../msx.html); off-chain are
-  [Explore](../explore.html) (the full sandbox, click-to-focus) and
-  [Reference](../reference.html). No `ready:false` pages remain.
+  [Explore](../explore.html) (the full sandbox, click-to-focus),
+  [Tune](../tune.html) (the VGM player) and [Reference](../reference.html). No
+  `ready:false` pages remain.
   ```bash
   python3 -m http.server
   ```
@@ -52,6 +53,58 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   SharedArrayBuffer, no COOP/COEP.
 - **Knowledge layer:** [../js/opll-spec.js](../js/opll-spec.js) — register
   metadata, note↔(F-Number,Block), and (added in Phase 3) `harmonics()`.
+
+## What the VGM tune player added (files)
+
+The deferred "load a file" feature (build-plan §7.1, memory `vgm-loader-plan`),
+retargeted from the SCC's tune stack (copy-don't-factor).
+
+- [../js/vgm.js](../js/vgm.js) — the VGM reader/replayer. `readVgmFile` (accepts
+  `.vgm`/`.vgz`, un-gzips via `DecompressionStream`), `parseHeader` (clocks, GD3,
+  loop), and **`VgmPlayer`** — a sample-clocked replayer that emits register
+  writes instead of audio, `tick(dtMs)` catching up to wall-clock. The OPLL command
+  is a plain **`0x51 aa dd`** → `onWrite(aa, dd)` (much simpler than the SCC's
+  port-based `0xD2`); **`0xA0`** PSG writes go to `onPsgWrite`; waits/other chips
+  skipped. Reworked from the SCC's `vgm.js`; header/wait machinery kept near-verbatim.
+- [../js/psg-core.js](../js/psg-core.js) + [../js/psg-worklet.js](../js/psg-worklet.js)
+  — **vendored verbatim** from msx-edu-scc (which vendored them from msx-edu-psg).
+  Classic scripts exposing `globalThis.PsgCore` / the `psg` processor. Only ever
+  driven by the VGM player.
+- [../js/audio.js](../js/audio.js) — **reworked** to add the PSG second node. Both
+  chips now feed a `DynamicsCompressor` limiter bus (so OPLL+drums can't clip);
+  `usePsg(on,{clock})` / `postPsg(reg,val)` / `resetPsg()` build and drive the PSG
+  worklet lazily (`PSG_GAIN = 0.14`, tuned by ear under the FM). The OPLL reg/reset
+  forwarding + play/stop are unchanged.
+- [../tune.html](../tune.html) + [../js/pages/tune.js](../js/pages/tune.js) — the
+  Tune page: a drop-zone / file-pick / **demo** loader, its **own transport**
+  (play=advance the log, pause=stop+key-off, rewind, loop) kept SEPARATE from
+  `isPlaying()` so a piano keypress starts audio without resuming the song, a live
+  scope (`viz.process`), five **write-activity** bars by register region (patch /
+  pitch / key / select / rhythm; PSG counted separately), GD3 metadata, a chip
+  list (OPLL + PSG played, anything else named + "not played"), and a 9-strip rack
+  that lights as the tune keys channels. Writes land via `store.set`, so every
+  widget reacts.
+- [../tools/make-demo-vgm.mjs](../tools/make-demo-vgm.mjs) +
+  **`../assets/demo.vgm`** — an original OPLL+PSG piece (Am–F–C–G, ~36 s), a small
+  FM driver that selects ROM instruments, swaps the lead between sections, keys FM
+  notes (real ADSR — no by-hand volume writes, unlike the SCC), and puts drums on
+  the PSG noise channel. Generated (MIT), not ripped; **committed** (not
+  gitignored). Regenerate with `node tools/make-demo-vgm.mjs`.
+- [../js/shell.js](../js/shell.js) — added the `tune` PAGES entry with
+  **`transport: false`**; the header Play button and play-on-edit are both
+  suppressed for such a page (it drives audio itself).
+- [../css/styles.css](../css/styles.css) — the Tune-page chrome (loader/drop-zone,
+  transport/seek, tune-head/chips, activity bars), ported from the SCC.
+- **Verifying gotcha (again):** the Tune player is driven by the rAF viz loop, and
+  the in-app browser pane **pauses rAF entirely when hidden** — so playback appears
+  frozen (time stuck at 0:00) in automated checks even though it is correct. Verify
+  the player by importing `vgm.js` and driving `VgmPlayer.tick()` manually (the
+  decode + timing are exact: 40×100 ms ticks → position 4.00 s), and trust that
+  audio plays when the tab is actually visible (the worklet path is verified
+  separately).
+- **Core untouched** — still 52 checks green. (The VGM player is pure playback into
+  the existing store/worklet; `verify-core.mjs` has no VGM checks — the demo's
+  structure is validated by a standalone header/stream walk instead.)
 
 ## What Phase 8 added (files)
 
@@ -288,16 +341,12 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 ## What's next
 
-All eight build-plan phases are done. The one remaining planned feature:
-
-- **Deferred: the VGM tune player** (build-plan §7.1). Its own step: retarget the
-  SCC's `js/vgm.js` + `js/pages/tune.js` + `assets/demo.vgm` +
-  `tools/make-demo-vgm.mjs` (copy-don't-factor). Decode OPLL VGM writes (`0x51`)
-  into `store.set`/`writeReg`; **forward the PSG drum track (`0xA0`) to a borrowed
-  `msx-edu-psg` worklet**; name any other declared chip and leave it silent. Add it
-  as a `PAGES` entry with `transport:false` (like the SCC's Tune page — it carries
-  its own play/pause/rewind, so the shell's header transport is suppressed and
-  play-on-edit must be gated off for it). See the VGM memory note.
+Nothing planned — the build plan and its one deferred extra are all done. If the
+project continues, candidates (all optional, none scoped): a real MSX-MUSIC VGM in
+`assets/` alongside the generated demo (licensing permitting); making the deep-dive
+widgets on Explore follow the focus voice's *live* rhythm state; a VRC7 variant
+toggle (explicitly declined in v1, build-plan §7.2); or a couple of `verify-core`
+checks that round-trip a tiny VGM through `VgmPlayer` into the core.
 
 ### Seams / notes for later
 - The chain pages seed registers on load; there is no cross-page state (each HTML
