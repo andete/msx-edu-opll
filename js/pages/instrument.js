@@ -25,6 +25,7 @@ store.set(0x06, 0x23); store.set(0x07, 0x33);
 store.set(0x30, 0x00);
 const a4 = midiToFnumBlock(69);
 store.setFnum(CH, a4.fnum); store.setBlock(CH, a4.block);
+store.keyOn(CH, true);   // keyed on at seed, so the header Play sounds at once
 
 mountShell('instrument', { keyboard: 'focus', octaves: 3 });
 

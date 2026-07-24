@@ -30,24 +30,39 @@ let psgOpts = {};
 // under the FM as a drum track rather than over it. Tuned by ear against the demo.
 const PSG_GAIN = 0.14;
 
+/** A gentle soft-clip transfer curve: identity up to ~0.7, then rounding peaks
+ *  toward ±0.88 (and clamping anything past ±1 there too). Zero-latency limiting. */
+function softClipCurve() {
+  const n = 2048;
+  const curve = new Float32Array(n);
+  const knee = 0.7;
+  for (let i = 0; i < n; i++) {
+    const x = (i / (n - 1)) * 2 - 1;   // −1..1
+    const ax = Math.abs(x);
+    const y = ax <= knee ? ax : knee + (1 - Math.exp(-(ax - knee) * 3)) * (1 - knee);
+    curve[i] = Math.sign(x) * y;
+  }
+  return curve;
+}
+
 export function onPlayState(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function emitState() { for (const fn of listeners) fn(playing); }
 export function isPlaying() { return playing; }
 
 async function ensureAudio() {
   if (ready) return;
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  // Ask for the lowest-latency output the platform will give — key-press → sound
+  // responsiveness matters more here than buffer safety.
+  ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
 
-  // A brick-wall limiter both chips feed. The OPLL alone stays within headroom,
-  // but the PSG drums add on top, so the worst-case sum can pass full scale and
-  // hard-clip at the destination. Transparent below ~-1 dB, so an OPLL-only page
-  // is untouched; it only acts when the two chips peak together.
-  master = ctx.createDynamicsCompressor();
-  master.threshold.value = -1;
-  master.knee.value = 0;
-  master.ratio.value = 20;
-  master.attack.value = 0.001;
-  master.release.value = 0.05;
+  // A soft-clip bus both chips feed. A 9-voice fortissimo chord (or the OPLL+PSG
+  // sum on the Tune page) can approach full scale and hard-clip at the destination;
+  // this rounds those peaks off. Unlike a DynamicsCompressor it is a pure per-sample
+  // WaveShaper — no lookahead, so it adds *zero* latency to the note-play path
+  // (which a compressor's ~6 ms would). Transparent below ~0.7; only the peaks bend.
+  master = ctx.createWaveShaper();
+  master.curve = softClipCurve();
+  master.oversample = 'none';
   master.connect(ctx.destination);
 
   // Load the shared DSP core, then the processor, into the worklet scope.

@@ -28,6 +28,7 @@ store.set(0x07, 0x0f); // car SL 0, RR 15 — clean release on key-off
 store.set(0x30, 0x00); // ch1 instrument 0 (user), volume 0 (loudest)
 const a4 = midiToFnumBlock(69);
 store.setFnum(CH, a4.fnum); store.setBlock(CH, a4.block);
+store.keyOn(CH, true);   // keyed on at seed, so the header Play sounds at once
 
 mountShell('tone', { keyboard: 'focus', octaves: 3 });
 

@@ -257,9 +257,13 @@ export class VgmPlayer {
 
       // --- end of stream ---
       if (cmd === 0x66) {
-        if (this.loop && this.header.loopOffset) {
-          this.pos = this.header.loopOffset;
+        if (this.loop) {
+          // Jump to the file's loop point if it declares one; otherwise restart
+          // from the top of the command data (a file with no loop offset — like our
+          // generated demo — still loops, rather than stopping dead).
+          this.pos = this.header.loopOffset || this.header.dataOffset;
           this.samples = 0;
+          this.partial = 0;
           this.onLoop?.();
           continue;
         }

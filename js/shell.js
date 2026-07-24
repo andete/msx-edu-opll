@@ -280,11 +280,25 @@ function spotAddrs(spot) {
 }
 
 function mountTools(mount, page, opts) {
+  // Keyboard routing. Focus pages send every note to channel 1 so the deep-dive
+  // widgets track it; the poly pages spread notes across the voices.
+  const kb = opts.keyboard || 'poly';
+  const isFocus = kb === 'focus';
+
+  // The single-voice pages seed their focus note keyed ON (see each page's seed),
+  // so the header Play sounds the voice immediately; the poly pages stay silent
+  // until you play a note. The hint says which, so Play never feels broken.
+  const hint = isFocus
+    ? `Press <b>▶ Play</b> in the header and you'll hear this page's voice right
+       away. The keys below re-trigger it and play other pitches, <b>while held</b>
+       — key-up is the only note-off the OPLL has.`
+    : `Press <b>▶ Play</b> in the header to start the chip, then play the keys below:
+       chords work, since the voices are independent. Keys sound <b>while held</b>;
+       key-up is the only note-off the OPLL has.`;
+
   mount.innerHTML = `
     <p class="tools-hint">
-      <b>▶ Play</b> in the header starts the chip; changing anything on the page
-      starts it too. The keys below play <b>while held</b> — key-up is the only
-      note-off the OPLL has. Use the mouse, or the computer keys printed on them
+      ${hint} Use the mouse, or the computer keys printed on them
       (<kbd>Z</kbd><kbd>S</kbd><kbd>X</kbd>…<kbd>M</kbd>), an octave laid out the
       way an MSX keyboard does it.
     </p>
@@ -300,24 +314,26 @@ function mountTools(mount, page, opts) {
       <div data-regs></div>
     </details>`;
 
-  // Keyboard routing. Focus pages send every note to channel 1 so the deep-dive
-  // widgets track it; the poly pages spread notes across the voices.
-  const kb = opts.keyboard || 'poly';
   let voices = null, onNoteOn, onNoteOff;
-  if (kb === 'focus') {
+  if (isFocus) {
     const held = [];                              // last-note-priority mono on ch1
     const CH = 0;
+    const setPitch = (midi) => {
+      const { fnum, block } = midiToFnumBlock(midi);
+      store.setFnum(CH, fnum); store.setBlock(CH, block);
+    };
     onNoteOn = (midi) => {
       if (!held.includes(midi)) held.push(midi);
-      const { fnum, block } = midiToFnumBlock(midi);
-      store.setFnum(CH, fnum); store.setBlock(CH, block); store.keyOn(CH, true);
+      setPitch(midi);
+      // Force a rising key edge so every press re-attacks the envelope, even when
+      // a note is already sounding (a held note, or the page's seeded tone).
+      store.keyOn(CH, false);
+      store.keyOn(CH, true);
     };
     onNoteOff = (midi) => {
       const i = held.indexOf(midi); if (i >= 0) held.splice(i, 1);
-      if (held.length) {
-        const { fnum, block } = midiToFnumBlock(held[held.length - 1]);
-        store.setFnum(CH, fnum); store.setBlock(CH, block);
-      } else store.keyOn(CH, false);
+      if (held.length) setPitch(held[held.length - 1]);   // fall back to the held note
+      else store.keyOn(CH, false);
     };
   } else {
     voices = new VoiceAllocator(store, { channels: (kb.channels ?? 9) });

@@ -26,6 +26,7 @@ store.set(0x07, 0x53); // car: SL 5, RR 3
 store.set(0x30, 0x00);
 const a4 = midiToFnumBlock(69);
 store.setFnum(CH, a4.fnum); store.setBlock(CH, a4.block);
+store.keyOn(CH, true);   // keyed on at seed, so the header Play sounds at once
 
 mountShell('envelope', { keyboard: 'focus', octaves: 3 });
 
