@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OPLL Playground — YM2413 (MSX-MUSIC)</title>
+  <meta name="description" content="Take the Yamaha YM2413 (OPLL) FM sound chip apart in your browser — the chip behind MSX-MUSIC.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e8a86'/%3E%3Cpath d='M4 16 q4 -10 8 0 t8 0 t8 0' fill='none' stroke='%23aef2ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- The DSP core is a CLASSIC script and must load before the ES modules,
+       so globalThis.OpllCore exists when they run. -->
+  <script src="js/opll-core.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 40 40" aria-hidden="true">
+        <rect class="logo-body" x="2" y="2" width="36" height="36" rx="8"/>
+        <path class="logo-wave" d="M8 20 q3 -9 6 0 t6 0 t6 0 t6 0" fill="none"/>
+      </svg>
+      <div>
+        <h1>OPLL Playground</h1>
+        <p class="tagline">Yamaha YM2413 — the FM chip of MSX-MUSIC</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge">Phase 1 · vertical slice</span>
+      <a class="badge badge-link" href="../msx-edu-psg/">PSG ↗</a>
+      <a class="badge badge-link" href="../msx-edu-scc/">SCC ↗</a>
+    </div>
+  </header>
+
+  <main id="main">
+    <p class="phase-note">
+      <b>Phase 1 — the pipeline, end to end.</b> One FM voice, its user instrument
+      set to a clean sustained sine (the modulator is silenced for now — FM,
+      envelopes and the rest arrive in later phases). Press <b>Play</b>, then a key:
+      you should <em>see</em> the sine on the scope and <em>hear</em> it, with the
+      write-only register file updating live below.
+    </p>
+
+    <section class="stage">
+      <div class="scope-wrap">
+        <canvas id="scope" class="scope"></canvas>
+      </div>
+
+      <div class="panels">
+        <div id="pitch"></div>
+        <div id="master"></div>
+      </div>
+
+      <div class="piano-block">
+        <div id="piano" class="piano-mount"></div>
+      </div>
+
+      <section class="reg-section">
+        <h2 class="section-title">
+          Register file
+          <span class="section-sub">write-only — the driver's shadow copy (00–38)</span>
+        </h2>
+        <div id="regs"></div>
+      </section>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>A clean-room teaching model of the YM2413 — behaviour from the docs, not
+      ported from an emulator. <a href="https://github.com/andete/msx-edu-opll">source</a> ·
+      MIT © 2026 Joost Yervante Damad</p>
+  </footer>
+
+  <script type="module" src="js/pages/index.js"></script>
+</body>
+</html>

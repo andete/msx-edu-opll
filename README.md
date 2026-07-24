@@ -6,9 +6,13 @@ of MSX2+ / turboR). Watch two operators modulate each other, shape an ADSR
 envelope, pick from the 15 ROM instruments or build your own, and hear the
 result — entirely in your browser.
 
-> **Status:** planning complete, build not started. This repo holds the
-> **research + design** phase — the chip reference, the site outline and the
-> phased build plan. No site code yet.
+> **Status:** **Phase 1 done** — the pipeline is proven end to end. One FM voice
+> (a clean carrier sine) plays from a live [index.html](index.html): press Play,
+> then a key, and see + hear it with the write-only register file exposed and
+> two-way bound. The full DSP core (`opll-core.js`) is written and guarded by
+> `node tools/verify-core.mjs`. Next phases add the ADSR envelope, the second
+> operator (FM itself), the patch/ROM gallery, nine voices, rhythm, the page
+> split and the MSX context — see [design/build-plan.md](design/build-plan.md).
 
 Unlike an emulator (which hides the chip behind a black box) or a datasheet
 (which never makes a sound), this exposes the chip's *internal signal path* — the
