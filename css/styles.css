@@ -294,6 +294,39 @@ kbd {
 .gallery-hint { margin: 0; font-size: 0.74rem; color: var(--text-faint); line-height: 1.4; }
 .gallery-hint b { color: var(--text-dim); }
 
+/* --- Voices mixer (Phase 5) --------------------------------------------- */
+.voices-section { margin-top: 1.4rem; }
+.voices-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.6rem;
+}
+.chan-strip {
+  display: flex; flex-direction: column; gap: 0.4rem;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-top: 3px solid var(--accent); border-radius: 10px;
+  padding: 0.5rem 0.55rem 0.6rem; box-shadow: var(--shadow);
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.chan-strip.sounding { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
+.chan-head { display: flex; align-items: baseline; justify-content: space-between; }
+.chan-id { font-weight: 650; font-size: 0.9rem; }
+.chan-tag { font-family: var(--mono); font-size: 0.66rem; color: var(--text-faint); }
+.chan-inst {
+  font: inherit; font-size: 0.76rem; width: 100%; padding: 0.2rem 0.3rem;
+  background: var(--bg-sunken); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 6px;
+}
+.chan-ctl { display: flex; flex-direction: column; gap: 0.15rem; }
+.chan-ctl span { font-size: 0.72rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+.chan-ctl span b { color: var(--text); font-family: var(--mono); font-size: 0.72rem; }
+.chan-key {
+  font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  padding: 0.35rem 0.5rem; margin-top: 0.1rem; user-select: none;
+  background: var(--bg-sunken); color: var(--text-dim);
+  border: 1px solid var(--border-strong); border-radius: 7px;
+}
+.chan-key:hover { background: var(--bg-hover); }
+.chan-key.on { background: var(--accent); color: #fff; border-color: var(--accent-strong); }
+
 /* --- Footer ------------------------------------------------------------- */
 .site-footer {
   border-top: 1px solid var(--border); padding: 1rem 1.4rem;

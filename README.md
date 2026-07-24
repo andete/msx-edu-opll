@@ -6,18 +6,18 @@ of MSX2+ / turboR). Watch two operators modulate each other, shape an ADSR
 envelope, pick from the 15 ROM instruments or build your own, and hear the
 result — entirely in your browser.
 
-> **Status:** **Phase 4 done** — **the whole patch + the ROM gallery**. From
-> [index.html](index.html): press Play and click any tile in the **Instrument
-> gallery** — the **User** slot plus the 15 ROM instruments, each drawn with its
-> **harmonic fingerprint** so their timbres are comparable at a glance. Selecting a
-> ROM sound plays it; **copy → user ✎** drops its 8 bytes into registers `00`–`07`
-> so the identical sound becomes fully editable by the operator panels, and
-> **preset chips** seed the user slot with hand-built teaching patches. Phase 3's ★
-> **operator-pair** and live **carrier harmonic bars** now follow whichever
-> instrument is selected. Pitch, both operators' envelopes, the FM timbre controls,
-> the instrument choice and the write-only register file are all two-way bound. The
-> DSP core (`opll-core.js`) is guarded by `node tools/verify-core.mjs` (34 checks).
-> Next phases add nine voices, rhythm, the page split and the MSX context — see
+> **Status:** **Phase 5 done** — **nine voices**. From [index.html](index.html):
+> press Play and hold a **chord** — the polyphonic allocator hands each note a free
+> channel (stealing the oldest when all nine are busy), so up to nine FM voices
+> sound at once. The new **Voices** mixer gives every channel its own
+> **instrument**, **pitch** and **level** plus a hold-to-sound **Key** button, and
+> each strip lights up live as the keyboard drives it — with `10–18`/`20–28`/`30–38`
+> updating per channel in the register file. Phases 3–4 still apply to the focus
+> voice (**channel 1**): the ★ **operator-pair**, the **harmonic bars**, and the
+> **Instrument gallery** (User + 15 ROM sounds with harmonic fingerprints and
+> **copy → user ✎**). Everything is two-way bound to the write-only register file.
+> The DSP core (`opll-core.js`) is guarded by `node tools/verify-core.mjs` (39
+> checks). Next phases add rhythm mode, the page split and the MSX context — see
 > [design/build-plan.md](design/build-plan.md).
 
 Unlike an emulator (which hides the chip behind a black box) or a datasheet

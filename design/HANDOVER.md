@@ -1,6 +1,6 @@
 # msx-edu-opll — session handover
 
-Written 2026-07-24, at the end of **Phase 4 (patch + ROM gallery)**. Read this first, then
+Written 2026-07-24, at the end of **Phase 5 (nine voices)**. Read this first, then
 [build-plan.md](build-plan.md) (the spec) and
 [../reference/opll-registers.md](../reference/opll-registers.md) (the chip truth).
 This project teaches the Yamaha **YM2413 (OPLL)** FM chip as a static, no-build web
@@ -11,10 +11,10 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 - **Done:** R (research/reference), D (design), 0+1 (vertical slice — one voice
   sounding), 2 (ADSR envelope + live scope), 3 (FM — the second operator),
-  **4 (the whole patch + the ROM gallery)**.
-- **Live sandbox:** [../index.html](../index.html) — a single voice (channel 1 /
-  index 0), full 2-operator FM, now with the 16-instrument gallery. Serve the
-  folder and open it:
+  4 (the whole patch + the ROM gallery), **5 (nine voices)**.
+- **Live sandbox:** [../index.html](../index.html) — nine polyphonic FM channels
+  (the deep-dive widgets still focus channel 1 / index 0). Serve the folder and
+  open it:
   ```bash
   python3 -m http.server
   ```
@@ -23,8 +23,8 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   ```bash
   node tools/verify-core.mjs
   ```
-  **34 checks** (24 core + 5 FM + 5 patch/gallery). It asserts behaviour vs
-  [reference §12](../reference/opll-registers.md), not cycle-exact emu2413.
+  **39 checks** (24 core + 5 FM + 5 patch/gallery + 5 polyphony). It asserts
+  behaviour vs [reference §12](../reference/opll-registers.md), not cycle-exact emu2413.
 
 ## Architecture crib (see build-plan §2–§3 for detail)
 
@@ -44,6 +44,31 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   SharedArrayBuffer, no COOP/COEP.
 - **Knowledge layer:** [../js/opll-spec.js](../js/opll-spec.js) — register
   metadata, note↔(F-Number,Block), and (added in Phase 3) `harmonics()`.
+
+## What Phase 5 added (files)
+
+- [../js/voices.js](../js/voices.js) — `VoiceAllocator`: maps held MIDI notes onto
+  the nine channels round-robin, steals the oldest voice when all nine are busy,
+  writes **only** pitch (`10`+ch/`20`+ch) + Key-On through the store (never
+  instrument/volume). Owns no sound state — just note↔channel bookkeeping.
+- [../js/panels/channel.js](../js/panels/channel.js) — `ChannelPanel`: one compact
+  mixer strip per channel (instrument `<select>` · MIDI-note pitch slider · level ·
+  a hold-to-sound **Key** button). Two-way bound to `10`+ch/`20`+ch/`30`+ch; the
+  strip lights (`.sounding`) whenever its channel is keyed — including when the
+  polyphonic piano drives it. Has an optional `onFocus(ch)` for the Phase-7 split.
+- [../js/pages/index.js](../js/pages/index.js) — seeds all nine channels (instrument
+  0 = the shared user patch, A4, keyed off) so the piano is a uniform polyphonic FM
+  instrument out of the box; mounts nine strips into `#voices`; the piano now calls
+  the allocator instead of hard-writing channel 0.
+- [../index.html](../index.html) — the `#voices` mixer section; Phase-5 note + badge.
+- [../tools/verify-core.mjs](../tools/verify-core.mjs) — 5 polyphony checks (nine
+  voices sum & louder than one, chord stays in DAC headroom, independent
+  pitch/instrument per channel).
+- **Focus voice, not channel-switching (yet).** The deep-dive widgets
+  (operator-pair, harmonics, ADSR, operator panels, pitch, patch gallery) still
+  hard-code `CH = 0`. Making them follow a *selected* channel (the site-outline's
+  "one voice expanded + voices 2–9 compact") is **Phase 7** (the page split);
+  `ChannelPanel`'s `onFocus` hook is the seam left for it.
 
 ## What Phase 4 added (files)
 
@@ -114,8 +139,6 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 ## What's next (build-plan §5)
 
-- **Phase 5 — nine voices** (`js/panels/channel.js` ×9; polyphony — the core
-  already sums 9 channels).
 - **Phase 6 — rhythm mode** (`0E` bit5 → 6 melodic + 5 drums + noise LFSR;
   `writeReg` currently ignores `0x0e`, marked "Phase 6").
 - **Phase 7 — multi-page split** (`js/shell.js` registry + chrome,

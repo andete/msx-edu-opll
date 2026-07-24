@@ -24,7 +24,7 @@
       </div>
     </div>
     <div class="header-badges">
-      <span class="badge">Phase 4 · Patch + ROM</span>
+      <span class="badge">Phase 5 · Nine voices</span>
       <a class="badge badge-link" href="../msx-edu-psg/">PSG ↗</a>
       <a class="badge badge-link" href="../msx-edu-scc/">SCC ↗</a>
     </div>
@@ -32,13 +32,14 @@
 
   <main id="main">
     <p class="phase-note">
-      <b>Phase 4 — the whole patch + the ROM gallery.</b> The OPLL mostly lets you
-      <em>pick</em> a sound, not build one: 15 instruments live in ROM, and only the
-      <b>User</b> slot is the 8 bytes you edit. Press <b>Play</b>, click any tile in
-      the <b>Instrument</b> gallery below to hear it, and compare their
-      <b>harmonic fingerprints</b>. Hit <b>copy&nbsp;→&nbsp;user&nbsp;✎</b> on a ROM
-      sound to drop its bytes into the user slot and shape it with the operator
-      controls — that is how you learn an FM patch.
+      <b>Phase 5 — nine voices.</b> The OPLL is <b>nine</b> independent FM channels.
+      Press <b>Play</b> and hold a chord on the keyboard — each note is handed a free
+      voice (oldest stolen when all nine are busy), so up to nine sound at once. The
+      <b>Voices</b> mixer below gives every channel its own <b>instrument</b>,
+      <b>pitch</b> and <b>level</b>, and a <b>Key</b> button to sound it directly —
+      watch <code>10–18</code>/<code>20–28</code>/<code>30–38</code> light up per
+      channel in the register file. The detailed widgets up top still follow
+      <b>channel&nbsp;1</b>.
     </p>
 
     <section class="stage">
@@ -61,6 +62,14 @@
       </div>
 
       <div id="patch"></div>
+
+      <section class="voices-section">
+        <h2 class="section-title">
+          Voices
+          <span class="section-sub">nine independent FM channels — play a chord, or key each directly</span>
+        </h2>
+        <div id="voices" class="voices-grid"></div>
+      </section>
 
       <div class="piano-block">
         <div id="piano" class="piano-mount"></div>

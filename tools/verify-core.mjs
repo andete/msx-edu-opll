@@ -310,5 +310,61 @@ console.log('\nInstrument fingerprints:');
     diff > 0.1, `L1 distance ${diff.toFixed(3)}`);
 }
 
+// --- 12. Nine voices: polyphony + per-channel independence (Phase 5) ------
+// The core sums all nine channels every sample; each channel carries its own
+// pitch, instrument and key state. The allocator (js/voices.js) just drives these
+// registers, so exercising them at the core level pins the polyphony behaviour.
+console.log('\nNine voices (polyphony):');
+{
+  // Key a plain sine voice on a set of channels and return the render's RMS.
+  function chordRms(channels) {
+    const core = new OpllCore(CLOCK, SR);
+    // A sustained clean-carrier user patch with a fast attack, so process() opens
+    // the envelope inside the window.
+    core.writeReg(0x00, 0x21); core.writeReg(0x01, 0x21);   // sustained, ML 1 both ops
+    core.writeReg(0x02, 0x3f);                              // modulator silenced → clean carrier
+    core.writeReg(0x04, 0xf0); core.writeReg(0x05, 0xf0);   // fast attack, no decay
+    core.writeReg(0x06, 0x00); core.writeReg(0x07, 0x00);   // hold (SL/RR 0)
+    for (const ch of channels) {
+      core.writeReg(0x30 + ch, 0x00);                       // inst 0 (user), vol 0
+      core.writeReg(0x10 + ch, 290);
+      core.writeReg(0x20 + ch, (4 << 1) | (1 << 4));        // block 4, key on
+    }
+    const buf = new Float32Array(4096); core.process(buf, 4096);
+    let rms = 0; for (const v of buf) rms += v * v;
+    return Math.sqrt(rms / buf.length);
+  }
+  const one = chordRms([0]);
+  const nine = chordRms([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+  check('nine keyed voices are louder than one (all channels sum)', nine > one * 2, `rms ${one.toFixed(3)} → ${nine.toFixed(3)}`);
+  check('a nine-voice chord stays within DAC headroom (|x| ≤ 1)', (() => {
+    const core = new OpllCore(CLOCK, SR);
+    for (let ch = 0; ch < 9; ch++) {
+      core.writeReg(0x30 + ch, 0x30);                       // Piano on every channel
+      core.writeReg(0x10 + ch, 260 + ch * 6);               // a spread of pitches
+      core.writeReg(0x20 + ch, (4 << 1) | (1 << 4));
+    }
+    return renderPeak(core, 0, 4096) <= 1.0;
+  })(), 'no clipping');
+
+  // Independent pitch: two channels at different F-Numbers produce different
+  // carrier frequencies.
+  const core = new OpllCore(CLOCK, SR);
+  core.writeReg(0x01, 0x01);                                // carrier ML 1 (shared user patch)
+  core.writeReg(0x11, 120); core.writeReg(0x21, (4 << 1));  // channel index 1: F-Number 120
+  core.writeReg(0x12, 240); core.writeReg(0x22, (4 << 1));  // channel index 2: F-Number 240 (2×)
+  check('channels carry independent pitch (F-Number per channel)',
+    Math.abs(carrierFreq(core, 2) - 2 * carrierFreq(core, 1)) < 1.0,
+    `${carrierFreq(core, 1).toFixed(1)} Hz vs ${carrierFreq(core, 2).toFixed(1)} Hz`);
+
+  // Independent instrument: one channel on the user patch vs another on a ROM
+  // instrument resolve to different effective patches.
+  const c2 = new OpllCore(CLOCK, SR);
+  c2.writeReg(0x30, 0x00);   // ch1 → user
+  c2.writeReg(0x31, 0x30);   // ch2 → Piano (ROM 3)
+  check('channels carry independent instruments',
+    JSON.stringify(c2.effectivePatch(0)) !== JSON.stringify(c2.effectivePatch(1)));
+}
+
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);
 process.exit(failures === 0 ? 0 : 1);
