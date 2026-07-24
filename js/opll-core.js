@@ -560,10 +560,18 @@
   // and cymbal are NOT square waves — each looks up the sine table at a phase
   // chosen by phase bits and the noise LFSR, which is what gives them their
   // pitched-yet-gritty character rather than a harsh buzz.
+  //
+  // Every drum phase generator FREE-RUNS: the phases advance each sample whatever
+  // the key state, and the envelope only gates the output. This is essential for
+  // the hi-hat and cymbal — they share `hatCymGate`, so the cymbal's timbre needs
+  // the hi-hat operator's phase to keep moving even when only the cymbal is hit
+  // (and vice versa). Gating those phases on key state collapses the gate and the
+  // metallic drum goes dull.
   OpllCore.prototype.rhythmSample = function () {
     this.clockNoise();
-    var gate = this.hatCymGate();     // read the operator phases BEFORE advancing
     var noise = this.noiseReg & 1;    // 0/1
+    var hh = this.slots[14], sd = this.slots[15], tom = this.slots[16], cym = this.slots[17];
+    var gate = this.hatCymGate();     // reads the hi-hat + cymbal operator phases
     var out = 0;
 
     // Bass Drum — a plain 2-op FM voice (channel 7, patch 16).
@@ -571,39 +579,30 @@
 
     // Snare Drum (ch8 carrier) — the carrier's top phase bit picks a tone phase,
     // the noise gates it: near-silent without noise, a ±tone crack with it.
-    var sd = this.slots[15];
     if (sd.egState !== IDLE) {
       var sdTop = (sd.phase - Math.floor(sd.phase)) >= 0.5;
       var sdPhase = sdTop ? (noise ? 0x300 : 0x200) : (noise ? 0x100 : 0x000);
       out += this.drumWave(sd, sdPhase) * egToGain(sd.eg + sd.tll);
-      this.advanceDrum(sd, 7);
     }
-
     // Tom-Tom (ch9 modulator) — the one purely tonal drum: its own sine.
-    var tom = this.slots[16];
     if (tom.egState !== IDLE) {
       var ti = ((tom.phase - Math.floor(tom.phase)) * SINE_LEN) | 0;
       out += this.drumWave(tom, ti) * egToGain(tom.eg + tom.tll);
-      this.advanceDrum(tom, 8);
     }
-
     // Hi-Hat (ch8 modulator) — the gate + noise pick a bright, short phase point.
-    var hh = this.slots[14];
     if (hh.egState !== IDLE) {
       var hhPhase = gate ? (noise ? 0x2d0 : 0x234) : (noise ? 0x034 : 0x0d0);
       out += this.drumWave(hh, hhPhase) * egToGain(hh.eg + hh.tll);
-      this.advanceDrum(hh, 7);
     }
-
-    // Top Cymbal (ch9 carrier) — the same gate, but tonal (no noise term): it
-    // rings rather than hisses.
-    var cym = this.slots[17];
+    // Top Cymbal (ch9 carrier) — the same gate, but tonal (no noise term): rings.
     if (cym.egState !== IDLE) {
       var cymPhase = gate ? 0x300 : 0x100;
       out += this.drumWave(cym, cymPhase) * egToGain(cym.eg + cym.tll);
-      this.advanceDrum(cym, 8);
     }
 
+    // Advance every drum phase generator + envelope, keyed or not (free-running).
+    this.advanceDrum(hh, 7); this.advanceDrum(sd, 7);
+    this.advanceDrum(tom, 8); this.advanceDrum(cym, 8);
     return out * RHYTHM_GAIN;
   };
 

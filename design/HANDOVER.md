@@ -23,7 +23,7 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   ```bash
   node tools/verify-core.mjs
   ```
-  **50 checks** (24 core + 5 FM + 5 patch/gallery + 5 polyphony + 11 rhythm). It
+  **52 checks** (24 core + 5 FM + 5 patch/gallery + 5 polyphony + 13 rhythm). It
   asserts behaviour vs [reference §9, §12](../reference/opll-registers.md), not
   cycle-exact emu2413.
 
@@ -59,7 +59,11 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   the **Snare/Hi-Hat/Cymbal** follow the documented OPLL rhythm algorithm — a
   `hatCymGate` phase-bit comparison + the 23-bit noise **LFSR** (`clockNoise`) pick
   an absolute **sine-table phase** (`drumWave`) each sample, so they read pitched-
-  yet-gritty, not as harsh squares. Drums are +3 dB (`RHYTHM_GAIN`, exported).
+  yet-gritty, not as harsh squares. **All drum phase generators free-run** (advanced
+  every sample regardless of key; the envelope gates only the output) — the hi-hat
+  and cymbal share the gate, so the cymbal's brightness depends on the hi-hat
+  operator's phase still moving even when only the cymbal is hit. Drums are +3 dB
+  (`RHYTHM_GAIN`, exported).
   Pitch/inst writes to ch7-9 are guarded so rhythm levels/patches aren't clobbered,
   and the ch7-9 channel-key bits are ignored in rhythm mode (drums key only via
   `0E`).
@@ -76,11 +80,12 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 - [../css/styles.css](../css/styles.css) — the rhythm panel styles (mod-orange
   accent; `.drum-pads.armed` gates the pads; `.drum-pad.hit` is the lit state).
 - [../js/pages/index.js](../js/pages/index.js) — mounts `RhythmPanel`.
-- [../tools/verify-core.mjs](../tools/verify-core.mjs) — **§13**, 11 rhythm checks
+- [../tools/verify-core.mjs](../tools/verify-core.mjs) — **§13**, 13 rhythm checks
   (five drums audible; **tom low/tonal, BD lowest, hi-hat brighter** — these lock
-  the tuning that a first pass got wrong; idle-vs-all; melodic 1-6 untouched; ch7-9
-  channel key dead; rhythm + 6 melodic within headroom; +3 dB ratio ==
-  `RHYTHM_GAIN`; noise balanced + non-degenerate).
+  the tuning that a first pass got wrong; **hi-hat AND cymbal keyed *alone* stay
+  bright > 2 kHz** — pins the free-running-phase fix; idle-vs-all; melodic 1-6
+  untouched; ch7-9 channel key dead; rhythm + 6 melodic within headroom; +3 dB
+  ratio == `RHYTHM_GAIN`; noise balanced + non-degenerate).
 - **Teaching-decision note (build-plan §7.3):** the drum synthesis is modelled
   "faithfully enough to sound right and be inspectable", **not** cycle-exact — but
   the metallic/snare voices DO follow the OPLL's documented rhythm algorithm (the

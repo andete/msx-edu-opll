@@ -17,7 +17,7 @@ result — entirely in your browser.
 > (**channel 1**) — the ★ **operator-pair**, the **harmonic bars**, the **Instrument
 > gallery** — still apply. Everything is two-way bound to the write-only register
 > file. The DSP core (`opll-core.js`) is guarded by `node tools/verify-core.mjs`
-> (**50 checks**). Next phases add the page split and the MSX context — see
+> (**52 checks**). Next phases add the page split and the MSX context — see
 > [design/build-plan.md](design/build-plan.md).
 
 Unlike an emulator (which hides the chip behind a black box) or a datasheet

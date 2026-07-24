@@ -409,6 +409,25 @@ console.log('\nRhythm mode (6 melodic + 5 drums):');
   check('the bass drum is the lowest voice (< tom, < 120 Hz)', bdF < 120 && bdF < tomF, `bd ${bdF.toFixed(0)} < tom ${tomF.toFixed(0)} Hz`);
   check('the hi-hat is far brighter than the tom', hhF > tomF * 4, `hh ${hhF.toFixed(0)} vs tom ${tomF.toFixed(0)} Hz`);
 
+  // Fraction of a drum's steady-state energy above 2 kHz — a brightness meter.
+  // The hi-hat and cymbal SHARE a phase-bit gate, so keying the cymbal alone must
+  // still be bright: their operator phase generators free-run regardless of key
+  // state. A regression where a metallic drum's partner phase froze left the
+  // cymbal-alone dull (energy stuck ~200-800 Hz) — this pins the fix.
+  function brightFrac(keyBits) {
+    const buf = drumBuf(keyBits, 6000).subarray(300, 300 + 4096);
+    const M = buf.length; let lo = 0, hi = 0;
+    for (let k = 4; k < M / 2; k += 4) {
+      const f = (k * SR) / M; let cr = 0, ci = 0;
+      for (let i = 0; i < M; i++) { const a = (2 * Math.PI * k * i) / M; cr += buf[i] * Math.cos(a); ci -= buf[i] * Math.sin(a); }
+      const m = cr * cr + ci * ci; if (f >= 2000) hi += m; else lo += m;
+    }
+    return hi / (hi + lo || 1);
+  }
+  const hhBright = brightFrac(0x01), cymBright = brightFrac(0x02);
+  check('hi-hat keyed alone is bright (majority of energy > 2 kHz)', hhBright > 0.4, `${(hhBright * 100).toFixed(0)}% > 2 kHz`);
+  check('cymbal keyed alone is bright (free-running gate, not dull)', cymBright > 0.4, `${(cymBright * 100).toFixed(0)}% > 2 kHz`);
+
   // The louder sine-lookup drums must still fit under the DAC ceiling alongside a
   // full melodic mix (6 Piano voices + all five drums keyed).
   {
