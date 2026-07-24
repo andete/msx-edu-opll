@@ -433,10 +433,14 @@
     return { carrier: carr };
   };
 
-  // Non-destructive, stable scope render: draw `frames` samples of a channel's
-  // modulator and carrier starting from phase 0 with the envelope forced open,
-  // then restore state. Deterministic → the waveform doesn't scroll, and it
-  // shows the timbre even when the channel is not currently keyed/audible.
+  // Non-destructive, stable scope render, phase-aligned so the trace doesn't
+  // scroll. Returns THREE Float32 arrays for one channel, then restores state:
+  //   carrier   — the LIVE output, scaled by the current envelope, so a note
+  //               visibly swells on attack and fades on release (flat when idle);
+  //   modulator — the modulator's live output (the FM source);
+  //   reference — the carrier with the envelope forced open: a steady, full-
+  //               amplitude timbre trace, always visible even while silent.
+  // The UI draws `reference` dim behind the bright, moving `carrier`.
   OpllCore.prototype.renderScope = function (frames, ch) {
     var mod = this.mod(ch), car = this.car(ch);
     var save = {
@@ -444,20 +448,33 @@
       cp: car.phase, co: car.out, cpv: car.prev, cs: car.egState, ce: car.eg,
       am: this.amPhase, pm: this.pmPhase
     };
-    mod.phase = 0; car.phase = 0; mod.out = 0; car.out = 0; mod.prev = 0; car.prev = 0;
-    mod.egState = SUSTAIN; car.egState = SUSTAIN; mod.eg = 0; car.eg = 0;
+    this.freezeEg = true;                 // hold the envelope steady across the window
     this.amPhase = 0; this.pmPhase = 0;
-    this.freezeEg = true;
-    var modArr = new Float32Array(frames), carArr = new Float32Array(frames);
+
+    // pass 1: LIVE (current envelope level)
+    this._scopeReset(mod, car);
+    var carArr = new Float32Array(frames), modArr = new Float32Array(frames);
+    var live = mod.egState !== IDLE || car.egState !== IDLE;
     for (var n = 0; n < frames; n++) {
       carArr[n] = this.channelSample(ch);
       modArr[n] = mod.out;
     }
+
+    // pass 2: REFERENCE (envelope forced open → steady timbre trace)
+    this._scopeReset(mod, car);
+    mod.egState = SUSTAIN; car.egState = SUSTAIN; mod.eg = 0; car.eg = 0;
+    var refArr = new Float32Array(frames);
+    for (var m = 0; m < frames; m++) refArr[m] = this.channelSample(ch);
+
     this.freezeEg = false;
     mod.phase = save.mp; mod.out = save.mo; mod.prev = save.mpv; mod.egState = save.ms; mod.eg = save.me;
     car.phase = save.cp; car.out = save.co; car.prev = save.cpv; car.egState = save.cs; car.eg = save.ce;
     this.amPhase = save.am; this.pmPhase = save.pm;
-    return { modulator: modArr, carrier: carArr };
+    return { carrier: carArr, modulator: modArr, reference: refArr, live: live };
+  };
+
+  OpllCore.prototype._scopeReset = function (mod, car) {
+    mod.phase = 0; car.phase = 0; mod.out = 0; car.out = 0; mod.prev = 0; car.prev = 0;
   };
 
   OpllCore.prototype.snapshot = function (ch) {

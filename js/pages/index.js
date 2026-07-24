@@ -57,14 +57,19 @@ function mount() {
     onNoteOff: () => store.keyOn(CH, false),
   });
 
-  const modColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--scope-mod').trim() || '#e0a24a';
+  const rootStyle = getComputedStyle(document.documentElement);
+  const modColor = rootStyle.getPropertyValue('--scope-mod').trim() || '#e0a24a';
+  const dimColor = rootStyle.getPropertyValue('--text-faint').trim() || '#7f9391';
 
   startVizLoop((viz) => {
-    // scope: the carrier waveform (timbre), modulator overlaid
-    const { carrier, modulator } = viz.renderScope(1024, CH);
+    // scope: a dim, steady timbre reference behind the LIVE carrier (which
+    // swells on attack and fades on release), with the modulator overlaid.
+    const { carrier, modulator, reference } = viz.renderScope(1024, CH);
     scope.draw(carrier, {
-      overlays: [{ data: modulator, color: modColor, alpha: 0.35, bipolar: true }],
+      overlays: [
+        { data: reference, color: dimColor, alpha: 0.16, bipolar: true },
+        { data: modulator, color: modColor, alpha: 0.35, bipolar: true },
+      ],
       label: 'ch1 carrier',
     });
     // ADSR: the carrier envelope schematic + the live playhead
