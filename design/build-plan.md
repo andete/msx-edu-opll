@@ -351,13 +351,22 @@ tune for the presets.
 
 ## 7. Open decisions (need a steer, but have sane defaults)
 
-1. **Load real MSX-MUSIC music?** ~~Out of scope for v1.~~ *Default: same as the
-   SCC — VGM yes as a stretch, KSS no.* VGM is a *log of register writes*, so a
-   `js/vgm.js` reader that decodes the OPLL commands (`0x51`) into `writeReg` calls
-   drops in almost for free once the store exists, and every widget reacts. KSS is
-   an MSX program needing a Z80 + machine model (an emulator), which would bypass
-   the chip model this site exists to expose — declined on the same two grounds as
-   the SCC project. Generate `assets/demo.vgm` with a tool rather than ripping.
+1. **Load real MSX-MUSIC music?** ~~Out of scope for v1.~~ **Confirmed: VGM yes
+   (as its own step), KSS no.** VGM is a *log of register writes*, so a `js/vgm.js`
+   reader that decodes the OPLL commands (`0x51`) into `writeReg` calls drops in
+   almost for free once the store exists, and every widget reacts. KSS is an MSX
+   program needing a Z80 + machine model (an emulator), which would bypass the chip
+   model this site exists to expose — declined on the same two grounds as the SCC
+   project. Generate `assets/demo.vgm` with a tool rather than ripping.
+   - **Deferred** past Phase 3 (decided 2026-07-24): build it as its own step,
+     landing with / just after the Phase 7 sandbox+page split, retargeting the
+     SCC's `js/vgm.js` + `pages/tune.js` + `assets/demo.vgm` (+ `tools/make-demo-vgm.mjs`)
+     rather than factoring — the copy-don't-factor family rule.
+   - **PSG drums: confirmed forward to a worklet** (decided 2026-07-24). MSX-MUSIC
+     tunes usually put drums on the AY PSG, a separate chip; borrow the sibling
+     `msx-edu-psg` worklet and forward the VGM's PSG writes (`0xA0`) to it, exactly
+     as the SCC's tune page does — not OPLL-only. Any *other* chip a file declares
+     is named on the page and left silent.
 2. **VRC7 variant toggle?** *Default: no (confirmed).* It needs a second
    instrument ROM and dilutes the MSX focus. Note it in Reference as "a clone with
    different sounds"; revisit only if wanted later.
