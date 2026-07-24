@@ -6,8 +6,9 @@ of MSX2+ / turboR). Watch two operators modulate each other, shape an ADSR
 envelope, pick from the 15 ROM instruments or build your own, and hear the
 result — entirely in your browser.
 
-> **Status:** planning. This repo currently holds the **research + design** phase:
-> the chip reference and the build plan. No site yet.
+> **Status:** planning complete, build not started. This repo holds the
+> **research + design** phase — the chip reference, the site outline and the
+> phased build plan. No site code yet.
 
 Unlike an emulator (which hides the chip behind a black box) or a datasheet
 (which never makes a sound), this exposes the chip's *internal signal path* — the
@@ -41,8 +42,10 @@ Part of the **msx-edu-\*** family — the shared recipe lives in
 - [reference/opll-registers.md](reference/opll-registers.md) — the chip spec
   (register map, the instrument ROM, pitch/FM/ADSR math, rhythm), distilled from
   Yamaha's application manual and cross-checked against emu2413 / openMSX.
-- `design/site-outline.md`, `design/build-plan.md` — *next up*, following the
-  [meta-plan](../msx-edu-meta/META-PLAN.md).
+- [design/site-outline.md](design/site-outline.md) — the intended site structure
+  (the chain of focus pages, the sandbox, the widget toolbox).
+- [design/build-plan.md](design/build-plan.md) — the phased implementation plan,
+  following the [meta-plan](../msx-edu-meta/META-PLAN.md).
 - [docs/SOURCES.md](docs/SOURCES.md) — the cached references (not committed; run
   [docs/fetch.sh](docs/fetch.sh) to populate them locally).
 
