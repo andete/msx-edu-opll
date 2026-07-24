@@ -147,6 +147,27 @@ console.log('\nKey-On damp:');
     `eg ${before.toFixed(1)} → ${core.car(0).eg.toFixed(1)}, state ${core.car(0).egState}`);
 }
 
+// --- 6b. EG-type: sustained holds at SL; percussive keeps falling ---------
+console.log('\nEG-type (sustained vs percussive):');
+{
+  function heldEg(egType) {
+    const core = new OpllCore(CLOCK, SR);
+    core.writeReg(0x30, 0x00);
+    core.writeReg(0x00, 0x01);
+    core.writeReg(0x01, 0x01 | (egType << 5));   // carrier EG-type bit
+    core.writeReg(0x04, 0xf0); core.writeReg(0x05, 0xf8); // fast AR, some DR
+    core.writeReg(0x06, 0x00); core.writeReg(0x07, 0x45); // car SL=4, RR=5 (percussive decays at RR)
+    core.writeReg(0x10, 290); core.writeReg(0x20, (4 << 1) | (1 << 4)); // key ON, held
+    const buf = new Float32Array(512);
+    for (let i = 0; i < 60; i++) core.process(buf, 512); // ~0.7 s held
+    return core.car(0).eg;
+  }
+  const sustained = heldEg(1);
+  const percussive = heldEg(0);
+  check('sustained (EG=1) holds near the sustain level (eg ≈ 32)', Math.abs(sustained - 32) < 6, `eg ${sustained.toFixed(1)}`);
+  check('percussive (EG=0) keeps decaying past sustain while held', percussive > sustained + 10, `eg ${percussive.toFixed(1)} > ${sustained.toFixed(1)}`);
+}
+
 // --- 7. Instrument ROM round-trips through the 00–07 layout ---------------
 console.log('\nInstrument ROM:');
 {

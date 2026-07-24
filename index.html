@@ -24,7 +24,7 @@
       </div>
     </div>
     <div class="header-badges">
-      <span class="badge">Phase 1 · vertical slice</span>
+      <span class="badge">Phase 2 · envelope</span>
       <a class="badge badge-link" href="../msx-edu-psg/">PSG ↗</a>
       <a class="badge badge-link" href="../msx-edu-scc/">SCC ↗</a>
     </div>
@@ -32,20 +32,26 @@
 
   <main id="main">
     <p class="phase-note">
-      <b>Phase 1 — the pipeline, end to end.</b> One FM voice, its user instrument
-      set to a clean sustained sine (the modulator is silenced for now — FM,
-      envelopes and the rest arrive in later phases). Press <b>Play</b>, then a key:
-      you should <em>see</em> the sine on the scope and <em>hear</em> it, with the
-      write-only register file updating live below.
+      <b>Phase 2 — the ADSR envelope.</b> Still one pure sine (the modulator is
+      silenced — FM arrives next), but now shaped by a real <b>Attack · Decay ·
+      Sustain · Release</b> envelope. Press <b>Play</b>, hold a key and watch the
+      playhead climb, decay and hold; let go to hear it release. Note the tiny
+      <em>damp</em> dip at the very start of every Key-On — an OPLL quirk.
     </p>
 
     <section class="stage">
-      <div class="scope-wrap">
-        <canvas id="scope" class="scope"></canvas>
+      <div class="viz-row">
+        <div class="scope-wrap viz-scope">
+          <canvas id="scope" class="scope"></canvas>
+        </div>
+        <div class="scope-wrap viz-adsr">
+          <canvas id="adsr" class="scope adsr-canvas"></canvas>
+        </div>
       </div>
 
       <div class="panels">
         <div id="pitch"></div>
+        <div id="operator"></div>
         <div id="master"></div>
       </div>
 

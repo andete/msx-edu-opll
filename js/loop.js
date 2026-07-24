@@ -25,10 +25,20 @@ export function startVizLoop(draw) {
     else if (evt.type === 'reset') viz.reset();
   });
 
+  // The OPLL's envelopes are stateful over time, so — unlike the PSG/SCC — the
+  // visualiser core must actually RUN, advancing by real elapsed time each frame,
+  // for the ADSR playhead to move. We step it into a throwaway buffer (the audio
+  // is discarded; the real sound comes from the worklet) and then draw from its
+  // now-current state. Clamped so a tab-switch stall can't process a huge block.
+  const MAX_SAMPLES = 8192;
+  const scratch = new Float32Array(MAX_SAMPLES);
+
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(now - last, 100); // clamp after tab-switch stalls
     last = now;
+    const n = Math.min(MAX_SAMPLES, Math.max(0, Math.round((dt / 1000) * viz.sampleRate)));
+    if (n > 0) viz.process(scratch, n);
     draw(viz, dt, isPlaying());
     requestAnimationFrame(frame);
   }

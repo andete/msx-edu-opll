@@ -10,36 +10,39 @@ import { startVizLoop } from '../loop.js';
 import { Scope } from '../components/scope.js';
 import { Piano } from '../components/piano.js';
 import { RegisterInspector } from '../components/register-inspector.js';
+import { AdsrView } from '../components/adsr-view.js';
 import { PitchPanel } from '../panels/pitch.js';
+import { OperatorPanel } from '../panels/operator.js';
 import { MasterPanel } from '../panels/master.js';
 import { midiToFnumBlock } from '../opll-spec.js';
 
 const CH = 0;
 
-// A clean sustained sine on the user instrument (registers 00–07):
-//   modulator TL = 63 (fully attenuated → no FM, pure carrier)
-//   both operators: instant attack, sustained envelope, full sine, no feedback
-function seedSinePatch() {
+// The user instrument (registers 00–07): a pure carrier sine (the modulator is
+// silenced with TL 63 → no FM yet) shaped by a musical carrier ADSR, so pressing
+// a key gives an attack, a decay to a sustain, and a release. FM arrives later.
+function seedPatch() {
   store.set(0x00, 0x21); // mod: EG(sustain)=1, ML=1
   store.set(0x01, 0x21); // car: EG(sustain)=1, ML=1
   store.set(0x02, 0x3f); // mod: KSL 0, TL 63 (silent modulator)
   store.set(0x03, 0x00); // car KSL 0, full sine both ops, feedback 0
-  store.set(0x04, 0xf0); // mod: AR 15, DR 0
-  store.set(0x05, 0xf0); // car: AR 15, DR 0
+  store.set(0x04, 0xf0); // mod: AR 15, DR 0 (irrelevant while silent)
+  store.set(0x05, 0xd8); // car: AR 13, DR 8
   store.set(0x06, 0x0f); // mod: SL 0, RR 15
-  store.set(0x07, 0x0f); // car: SL 0, RR 15
+  store.set(0x07, 0x47); // car: SL 4, RR 7
   store.set(0x30 + CH, 0x00); // ch1: instrument 0 (user), volume 0 (loudest)
-  // default pitch A4 so the readout is meaningful before the first key press
-  const { fnum, block } = midiToFnumBlock(69);
+  const { fnum, block } = midiToFnumBlock(69); // A4
   store.setFnum(CH, fnum);
   store.setBlock(CH, block);
 }
 
 function mount() {
-  seedSinePatch();
+  seedPatch();
 
   const scope = new Scope(document.getElementById('scope'));
+  const adsr = new AdsrView(document.getElementById('adsr'));
   new PitchPanel(document.getElementById('pitch'), store, CH);
+  new OperatorPanel(document.getElementById('operator'), store, 'car', CH);
   new MasterPanel(document.getElementById('master'));
   new RegisterInspector(document.getElementById('regs'), store);
 
@@ -54,14 +57,18 @@ function mount() {
     onNoteOff: () => store.keyOn(CH, false),
   });
 
-  // Visualiser: draw channel 1's carrier (main) with the modulator overlaid.
+  const modColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--scope-mod').trim() || '#e0a24a';
+
   startVizLoop((viz) => {
+    // scope: the carrier waveform (timbre), modulator overlaid
     const { carrier, modulator } = viz.renderScope(1024, CH);
     scope.draw(carrier, {
-      overlays: [{ data: modulator, color: getComputedStyle(document.documentElement)
-        .getPropertyValue('--scope-mod').trim() || '#7fd', alpha: 0.35, bipolar: true }],
+      overlays: [{ data: modulator, color: modColor, alpha: 0.35, bipolar: true }],
       label: 'ch1 carrier',
     });
+    // ADSR: the carrier envelope schematic + the live playhead
+    adsr.draw(viz.effectivePatch(CH).car, viz.snapshot(CH).car);
   });
 }
 

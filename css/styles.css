@@ -111,6 +111,10 @@ h1 { font-size: 1.25rem; margin: 0; letter-spacing: -0.01em; }
   box-shadow: var(--shadow); background: var(--scope-bg);
 }
 .scope { display: block; width: 100%; height: 220px; }
+.viz-row { display: grid; grid-template-columns: 1.7fr 1fr; gap: 1rem; }
+.viz-row .scope-wrap { min-width: 0; }
+.adsr-canvas { height: 220px; }
+@media (max-width: 720px) { .viz-row { grid-template-columns: 1fr; } }
 
 /* --- Panels ------------------------------------------------------------- */
 .panels {
@@ -123,6 +127,10 @@ h1 { font-size: 1.25rem; margin: 0; letter-spacing: -0.01em; }
   display: flex; flex-direction: column; gap: 0.7rem;
 }
 .panel-pitch { border-top: 3px solid var(--accent); }
+.panel-env { border-top: 3px solid var(--mod); }
+.chk-row { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin-top: 0.2rem; }
+.chk { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--text-dim); cursor: pointer; }
+.chk input { accent-color: var(--accent); }
 .panel-head { display: flex; align-items: baseline; justify-content: space-between; }
 .panel-title { font-weight: 650; font-size: 0.95rem; }
 .panel-tag {

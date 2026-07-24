@@ -295,9 +295,12 @@
   };
   OpllCore.prototype.egPerSample = function (effRate) {
     if (effRate <= 0) return 0;
-    // reference: fastest rates near-instant, slowest span seconds. 49716-based.
-    var base = (this.sampleRate / this.fsam) * (EG_MUTE / 6.0); // ~ units/sec @rate low
-    return base * Math.pow(2, (effRate - 1) / 2) / this.sampleRate * 40;
+    // The chip's rate field maps to time roughly as ×2 per field step (each +4
+    // in the internal rate doubles the speed, and the 4-bit field feeds it
+    // directly). So rate 15 ≈ instant and rate ~2 spans seconds — a realistic
+    // ADSR range. units/second = 2·2^effRate; divided by the sample rate so the
+    // timing is independent of the audio/viz rate.
+    return (2.0 * Math.pow(2, effRate)) / this.sampleRate;
   };
 
   OpllCore.prototype.stepEnvelope = function (slot, ch, isCarrier) {
