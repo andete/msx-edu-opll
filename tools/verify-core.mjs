@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { harmonics } from '../js/opll-spec.js';
+import { harmonics, instrumentFingerprint } from '../js/opll-spec.js';
 
 const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
@@ -256,6 +256,58 @@ console.log('\nFM (modulator → carrier harmonics):');
   const noFb = analyze((c) => { c.writeReg(0x00, 0x01); c.writeReg(0x02, 0x00); c.writeReg(0x03, 0x00); });
   const withFb = analyze((c) => { c.writeReg(0x00, 0x01); c.writeReg(0x02, 0x00); c.writeReg(0x03, 0x07); });
   check('feedback enriches the modulator (sine → brighter wave)', withFb.modHigh > noFb.modHigh + 0.05, `modHigh ${noFb.modHigh.toFixed(4)} → ${withFb.modHigh.toFixed(3)}`);
+}
+
+// --- 10. Instrument selection + copy-to-user identity (Phase 4) -----------
+// Selecting a ROM instrument makes the channel USE that patch; "copy to user"
+// reproduces the identical sound in the editable user slot. (reference §4)
+console.log('\nInstrument select / copy-to-user:');
+{
+  const rom = OpllCore.INSTRUMENT_ROM[7];               // Trumpet
+  const romDec = JSON.stringify(OpllCore.decodePatch(rom));
+
+  const core = new OpllCore(CLOCK, SR);
+  core.writeReg(0x30, 0x70);                            // select inst 7
+  check('selecting inst 7 uses the ROM Trumpet patch',
+    JSON.stringify(core.effectivePatch(0)) === romDec);
+
+  for (let i = 0; i < 8; i++) core.writeReg(i, rom[i]); // copy → user slot
+  core.writeReg(0x30, 0x00);                            // select inst 0 (user)
+  check('copy-to-user reproduces the ROM patch in the user slot',
+    JSON.stringify(core.effectivePatch(0)) === romDec);
+
+  // …and it sounds the same: identical peak over an identical keyed render.
+  function peakOf(instByte, copyRom) {
+    const c = new OpllCore(CLOCK, SR);
+    if (copyRom) for (let i = 0; i < 8; i++) c.writeReg(i, rom[i]);
+    c.writeReg(0x30, instByte);
+    c.writeReg(0x10, 290); c.writeReg(0x20, (4 << 1) | (1 << 4)); // block 4, key on
+    return renderPeak(c, 0, 4096);
+  }
+  const pRom = peakOf(0x70, false), pUser = peakOf(0x00, true);
+  check('the copied user patch sounds identical to the ROM instrument',
+    Math.abs(pRom - pUser) < 1e-6, `peak ${pRom.toFixed(4)} vs ${pUser.toFixed(4)}`);
+}
+
+// --- 11. Instrument fingerprints (the gallery) ----------------------------
+// The gallery's per-tile bar chart: bar 0 is the fundamental, higher bars are the
+// FM-added harmonics. A silenced modulator is ~one bar; a real ROM patch spreads.
+console.log('\nInstrument fingerprints:');
+{
+  const upper = (fp) => { let s = 0; for (let i = 1; i < fp.length; i++) s += fp[i]; return s; };
+  // Pure-sine user patch (modulator TL 63) → dominated by the fundamental bar.
+  const pure = instrumentFingerprint(0, [0x21, 0x21, 0x3f, 0x00, 0xf0, 0xf0, 0x0f, 0x0f]);
+  check('a silenced-modulator user patch is nearly a single bar',
+    pure[0] > upper(pure) * 3, `fund ${pure[0].toFixed(3)} vs upper ${upper(pure).toFixed(3)}`);
+  // A ROM brass patch (Trumpet) carries real upper-harmonic content.
+  const trumpet = instrumentFingerprint(7);
+  check('the Trumpet fingerprint has real upper-harmonic content',
+    upper(trumpet) > 0.1, `upper ${upper(trumpet).toFixed(3)}`);
+  // Distinct instruments produce distinct fingerprints.
+  const flute = instrumentFingerprint(4);
+  let diff = 0; for (let i = 0; i < trumpet.length; i++) diff += Math.abs(trumpet[i] - flute[i]);
+  check('different instruments have different fingerprints (Trumpet ≠ Flute)',
+    diff > 0.1, `L1 distance ${diff.toFixed(3)}`);
 }
 
 console.log(`\n${failures === 0 ? 'ALL CHECKS PASSED' : failures + ' CHECK(S) FAILED'}`);

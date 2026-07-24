@@ -17,6 +17,7 @@ import { AdsrView } from '../components/adsr-view.js';
 import { PitchPanel } from '../panels/pitch.js';
 import { OperatorPanel } from '../panels/operator.js';
 import { MasterPanel } from '../panels/master.js';
+import { PatchPanel } from '../components/patch-panel.js';
 import { midiToFnumBlock, fnumBlockToFreq } from '../opll-spec.js';
 
 const CH = 0;
@@ -52,6 +53,7 @@ function mount() {
   new OperatorPanel(document.getElementById('operator-mod'), store, 'mod', CH);
   new OperatorPanel(document.getElementById('operator-car'), store, 'car', CH);
   new MasterPanel(document.getElementById('master'));
+  new PatchPanel(document.getElementById('patch'), store, CH);
   new RegisterInspector(document.getElementById('regs'), store);
 
   new Piano(document.getElementById('piano'), {

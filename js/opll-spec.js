@@ -140,6 +140,55 @@ export function harmonics(samples, f0, nHarm = 16) {
   return { mag };
 }
 
+// --- Instrument fingerprints (the ROM gallery, Phase 4) --------------------
+
+// One private throwaway core for offline analysis — never the audio or viz core,
+// so nothing it does is heard or drawn. globalThis.OpllCore is read lazily (at
+// call time, not module-eval time) so this also works under the Node verifier,
+// where the core is `require`d *after* this module is imported.
+let _fpCore = null;
+function fpCore() {
+  const C = globalThis.OpllCore;
+  if (!_fpCore && C) _fpCore = new C(CLOCK, 44100);
+  return _fpCore;
+}
+
+const FP_MIDI = 57;      // A3 — low enough that many harmonics fit under Nyquist,
+                         // high enough that the render spans plenty of periods
+const FP_FRAMES = 4096;
+export const FP_BARS = 12;
+
+/**
+ * The harmonic "fingerprint" of an instrument — the timbral signature the gallery
+ * draws under each tile. `n` is the instrument index: 0 = the live user patch
+ * (pass its 8 bytes so the bars track edits), 1..15 = the fixed ROM. Deterministic
+ * and offline: it loads the patch into the private core, pitches it to a fixed mid
+ * note, renders the carrier with the envelope forced open (renderPair), and bins
+ * that against the played note's fundamental. Bar 0 is the fundamental; FM spreads
+ * energy into the higher bars, which is what makes each instrument look distinct.
+ *
+ * @param {number} n              instrument index 0..15
+ * @param {number[]} [userBytes]  the 8 user-patch bytes (only used when n === 0)
+ * @returns {Float64Array}        FP_BARS magnitudes (bar 0 = fundamental)
+ */
+export function instrumentFingerprint(n, userBytes) {
+  const out = new Float64Array(FP_BARS);
+  const core = fpCore();
+  if (!core) return out;
+  if (n === 0 && userBytes) {
+    for (let i = 0; i < 8; i++) core.writeReg(i, userBytes[i] & 0xff);
+  }
+  core.writeReg(0x30, (n & 0x0f) << 4);              // instrument n, volume 0 (loudest)
+  const { fnum, block } = midiToFnumBlock(FP_MIDI);
+  core.writeReg(0x10, fnum & 0xff);
+  core.writeReg(0x20, (block << 1) | ((fnum >> 8) & 1)); // key off — renderPair opens the env
+  const { carrier } = core.renderPair(FP_FRAMES, 0);
+  const f0 = fnumBlockToFreq(fnum, block) / core.sampleRate;
+  const { mag } = harmonics(carrier, f0, FP_BARS);
+  for (let k = 1; k <= FP_BARS; k++) out[k - 1] = mag[k];
+  return out;
+}
+
 /** Human-readable label for a single address (for tooltips). */
 export function addrLabel(addr) {
   for (const g of REGISTER_GROUPS) {

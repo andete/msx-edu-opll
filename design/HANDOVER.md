@@ -1,6 +1,6 @@
 # msx-edu-opll — session handover
 
-Written 2026-07-24, at the end of **Phase 3 (FM)**. Read this first, then
+Written 2026-07-24, at the end of **Phase 4 (patch + ROM gallery)**. Read this first, then
 [build-plan.md](build-plan.md) (the spec) and
 [../reference/opll-registers.md](../reference/opll-registers.md) (the chip truth).
 This project teaches the Yamaha **YM2413 (OPLL)** FM chip as a static, no-build web
@@ -9,11 +9,12 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 ## Where things stand
 
-- **HEAD:** `8b21a37` (design decision). Phase 3 code is `0491435`.
 - **Done:** R (research/reference), D (design), 0+1 (vertical slice — one voice
-  sounding), 2 (ADSR envelope + live scope), **3 (FM — the second operator)**.
+  sounding), 2 (ADSR envelope + live scope), 3 (FM — the second operator),
+  **4 (the whole patch + the ROM gallery)**.
 - **Live sandbox:** [../index.html](../index.html) — a single voice (channel 1 /
-  index 0), full 2-operator FM. Serve the folder and open it:
+  index 0), full 2-operator FM, now with the 16-instrument gallery. Serve the
+  folder and open it:
   ```bash
   python3 -m http.server
   ```
@@ -22,7 +23,7 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   ```bash
   node tools/verify-core.mjs
   ```
-  **29 checks** (24 core + 5 FM). It asserts behaviour vs
+  **34 checks** (24 core + 5 FM + 5 patch/gallery). It asserts behaviour vs
   [reference §12](../reference/opll-registers.md), not cycle-exact emu2413.
 
 ## Architecture crib (see build-plan §2–§3 for detail)
@@ -43,6 +44,32 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   SharedArrayBuffer, no COOP/COEP.
 - **Knowledge layer:** [../js/opll-spec.js](../js/opll-spec.js) — register
   metadata, note↔(F-Number,Block), and (added in Phase 3) `harmonics()`.
+
+## What Phase 4 added (files)
+
+- ★ [../js/components/patch-panel.js](../js/components/patch-panel.js) — the
+  Instrument gallery: 16 tiles (User + 15 ROM), each with a harmonic-fingerprint
+  canvas, click-to-select (writes `30`+ch), **copy → user ✎** on ROM tiles (drops
+  the ROM's 8 bytes into `00`–`07` and switches to slot 0), and preset chips.
+  Two-way bound: the active tile follows `30`+ch; the User fingerprint redraws when
+  `00`–`07` change.
+- [../js/presets.js](../js/presets.js) — five hand-built, editable teaching user
+  patches (Pure sine / 2:1 Bell / Brass / Clav / Feedback growl) + `loadUserPatch`.
+  Our own bytes, not any ROM/emulator table.
+- [../js/opll-spec.js](../js/opll-spec.js) `instrumentFingerprint(n, userBytes)` —
+  offline harmonic signature: a **private throwaway core** (read lazily from
+  `globalThis.OpllCore` so the Node verifier works too), pitched to a fixed mid
+  note, `renderPair` → `harmonics` binned against the note fundamental. `FP_BARS`
+  exported.
+- [../js/pages/index.js](../js/pages/index.js) + [../index.html](../index.html) —
+  mount `#patch`; Phase-4 note + badge. The existing operator-pair / harmonics /
+  ADSR viz already read `patchBytes(ch)`, so they follow the selected ROM for free.
+- [../tools/verify-core.mjs](../tools/verify-core.mjs) — 5 checks appended (§10
+  select + copy-to-user identity, §11 fingerprint sanity/distinctness).
+- **Note:** the operator panels always edit the *user* slot (`00`–`07`). While a
+  ROM instrument is selected they don't change the sound — the gallery status line
+  says so, and **copy → user** is the bridge. Dimming them when a ROM is active is
+  possible Phase-5+ polish, not done.
 
 ## What Phase 3 added (files)
 
@@ -87,10 +114,6 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 ## What's next (build-plan §5)
 
-- **Phase 4 — the whole patch + ROM gallery** (★): `opll-spec.js` already has
-  `INSTRUMENT_ROM`/`INSTRUMENT_NAMES`/`decodePatch`; add
-  `js/components/patch-panel.js` (8 user bytes as controls) + a ROM gallery with a
-  **copy-to-user** button (write the ROM bytes into `00`–`07`), and `js/presets.js`.
 - **Phase 5 — nine voices** (`js/panels/channel.js` ×9; polyphony — the core
   already sums 9 channels).
 - **Phase 6 — rhythm mode** (`0E` bit5 → 6 melodic + 5 drums + noise LFSR;

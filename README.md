@@ -6,16 +6,19 @@ of MSX2+ / turboR). Watch two operators modulate each other, shape an ADSR
 envelope, pick from the 15 ROM instruments or build your own, and hear the
 result — entirely in your browser.
 
-> **Status:** **Phase 3 done** — **FM: the second operator**. From
-> [index.html](index.html): press Play, hold a key, and sweep the modulator's
-> **Multiple**, **Total level** and **Feedback** — hear the timbre change and watch
-> the ★ **operator-pair** (modulator → the FM link → carrier, with a "show
-> internals" view of the injected phase) and the live **carrier harmonic bars**. A
-> 2:1 Multiple ratio rings like a bell. Pitch, both operators' envelopes, the FM
-> timbre controls and the write-only register file are all two-way bound. The DSP
-> core (`opll-core.js`) is guarded by `node tools/verify-core.mjs` (29 checks). Next
-> phases add the patch/ROM gallery, nine voices, rhythm, the page split and the MSX
-> context — see [design/build-plan.md](design/build-plan.md).
+> **Status:** **Phase 4 done** — **the whole patch + the ROM gallery**. From
+> [index.html](index.html): press Play and click any tile in the **Instrument
+> gallery** — the **User** slot plus the 15 ROM instruments, each drawn with its
+> **harmonic fingerprint** so their timbres are comparable at a glance. Selecting a
+> ROM sound plays it; **copy → user ✎** drops its 8 bytes into registers `00`–`07`
+> so the identical sound becomes fully editable by the operator panels, and
+> **preset chips** seed the user slot with hand-built teaching patches. Phase 3's ★
+> **operator-pair** and live **carrier harmonic bars** now follow whichever
+> instrument is selected. Pitch, both operators' envelopes, the FM timbre controls,
+> the instrument choice and the write-only register file are all two-way bound. The
+> DSP core (`opll-core.js`) is guarded by `node tools/verify-core.mjs` (34 checks).
+> Next phases add nine voices, rhythm, the page split and the MSX context — see
+> [design/build-plan.md](design/build-plan.md).
 
 Unlike an emulator (which hides the chip behind a black box) or a datasheet
 (which never makes a sound), this exposes the chip's *internal signal path* — the
