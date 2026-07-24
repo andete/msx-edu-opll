@@ -6,20 +6,23 @@ of MSX2+ / turboR). Watch two operators modulate each other, shape an ADSR
 envelope, pick from the 15 ROM instruments or build your own, and hear the
 result — entirely in your browser.
 
-> **Status:** **Phase 7 done** — **the multi-page split**. The single sandbox is
-> now a **site**: a landing page ([index.html](index.html)) whose hero is the
-> clickable, live **signal-path diagram**, and the seven-stage **chain** —
-> [Tone](tone.html) → [Envelope](envelope.html) → [FM](fm.html) →
-> [Instrument](instrument.html) → [Voices](voices.html) → [Rhythm](rhythm.html) →
-> [MSX](msx.html) — each a standalone page mounting only its own widgets, with a
-> **register spotlight**, self-checking **challenges**, and shared piano + register
-> inspector. [explore.html](explore.html) keeps the full sandbox (now with
-> click-to-**focus** any of the nine voices). Chrome, nav and the play-on-edit
-> transport live in one place ([js/shell.js](js/shell.js)). Everything is still
-> two-way bound to the write-only register file; the DSP core (`opll-core.js`) is
-> unchanged and guarded by `node tools/verify-core.mjs` (**52 checks**). Next:
-> Phase 8 — the MSX **code view**, the **Reference** page, and polish — see
-> [design/build-plan.md](design/build-plan.md).
+> **Status:** **Phase 8 done — the site is feature-complete.** On top of the
+> Phase 7 page split (a landing page whose hero is the clickable, live
+> **signal-path diagram**, and the seven-stage chain [Tone](tone.html) →
+> [Envelope](envelope.html) → [FM](fm.html) → [Instrument](instrument.html) →
+> [Voices](voices.html) → [Rhythm](rhythm.html) → [MSX](msx.html), plus
+> [Explore](explore.html)), the [MSX](msx.html) page now carries a live **code
+> view** — the exact `OUT (7Ch)/(7Dh)` Z80 sequence for whatever the chip is doing,
+> regenerated on every register change — and the new [Reference](reference.html)
+> page gives the **register map**, the **eight patch bytes bit-by-bit**, a
+> **note ↔ (F-Number, Block) calculator**, the **Multiple** and **level** tables,
+> and all **15 ROM instruments** decoded with their harmonic fingerprints. Nothing
+> on Reference is transcribed — every value is computed by the same
+> `opll-spec.js` / `opll-core.js` the synth uses. Plus a keyboard/mobile/a11y pass.
+> Everything is two-way bound to the write-only register file; the DSP core
+> (`opll-core.js`) is guarded by `node tools/verify-core.mjs` (**52 checks**). The
+> one remaining planned extra is the **deferred VGM tune player** (see
+> [design/build-plan.md §7.1](design/build-plan.md)).
 
 Unlike an emulator (which hides the chip behind a black box) or a datasheet
 (which never makes a sound), this exposes the chip's *internal signal path* — the

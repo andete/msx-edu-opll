@@ -1,11 +1,12 @@
-// pages/msx.js — stage 7: the ports, and the write-only shadow story.
+// pages/msx.js — stage 7: the ports, the write-only shadow, and the code view.
 //
-// A prose page for now (the full interactive code view is Phase 8). It does one
-// live thing: echo the most recent register write as the pair of Z80 OUTs that
-// would produce it, so the "everything is a 7Ch/7Dh write" claim is concrete.
+// The code view is generated live from the register file, so the "everything is
+// a 7Ch/7Dh write" claim is not just told — it is shown, for whatever the chip is
+// doing right now, and it rewrites itself as you play.
 
 import { store } from '../store.js';
 import { mountShell } from '../shell.js';
+import { createCodeView } from '../components/code-view.js';
 import { midiToFnumBlock } from '../opll-spec.js';
 
 // Seed a plain audible voice so poking the keyboard/register file makes sound.
@@ -18,10 +19,4 @@ for (let ch = 0; ch < 9; ch++) { store.set(0x30 + ch, 0x00); store.setFnum(ch, a
 
 mountShell('msx', { keyboard: 'poly', octaves: 3 });
 
-const hx = (n) => n.toString(16).toUpperCase().padStart(2, '0');
-const out = document.getElementById('lastWrite');
-store.subscribe((e) => {
-  if (e.type !== 'reg') return;
-  out.textContent =
-    `LD A,${hx(e.addr)}h · OUT (7Ch),A · LD A,${hx(e.value)}h · OUT (7Dh),A`;
-});
+createCodeView(document.getElementById('code'));

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reference — register map, ROM, calculators | OPLL Playground</title>
+  <meta name="description" content="YM2413 (OPLL) reference: the register map, the eight patch bytes decoded, a note↔(F-Number,Block) calculator, the Multiple and level tables, and all 15 ROM instruments with their harmonic fingerprints.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e8a86'/%3E%3Cpath d='M4 16 q4 -10 8 0 t8 0 t8 0' fill='none' stroke='%23aef2ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/opll-core.js"></script>
+</head>
+<body>
+  <header data-shell-header></header>
+
+  <main id="main" class="focus-page">
+    <h2 class="page-title">Reference</h2>
+    <p class="page-intro">
+      The lookup page. Nothing here is transcribed by hand: every table row and
+      every calculator answer is computed by the same <code>opll-spec.js</code> /
+      <code>opll-core.js</code> the synth uses, so this page cannot drift from the
+      chip model — if a number is wrong here, the sound is wrong the same way, and
+      both are fixed in one place.
+    </p>
+
+    <nav class="toc" aria-label="On this page">
+      <a href="#map">Register map</a>
+      <a href="#patch">The 8 patch bytes</a>
+      <a href="#pitch">Pitch calculator</a>
+      <a href="#multiple">Multiple table</a>
+      <a href="#levels">Levels &amp; envelope</a>
+      <a href="#rom">Instrument ROM</a>
+      <a href="#family">OPL family</a>
+      <a href="#sources">Sources</a>
+    </nav>
+
+    <section id="map">
+      <h3 class="sub-title">The register map</h3>
+      <p class="page-intro">The YM2413 answers to addresses <code>00</code>–<code>38</code>. The
+        eight user-instrument bytes are shared by every channel that selects
+        instrument 0; the rest repeat once per channel.</p>
+      <div class="table-wrap">
+        <table class="ref-table" id="mapTable">
+          <thead><tr><th>Address</th><th>What it is</th><th>Layout</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="patch">
+      <h3 class="sub-title">The eight patch bytes, bit by bit</h3>
+      <p class="page-intro">Registers <code>00</code>–<code>07</code> are one complete FM patch — the
+        modulator on the even bytes, the carrier on the odd ones. This is the
+        layout the ROM instruments use too.</p>
+      <div class="table-wrap">
+        <table class="ref-table ref-table-tight" id="patchTable">
+          <thead><tr><th>Byte</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>0</th><th>Meaning</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="pitch">
+      <h3 class="sub-title">Pitch: note → (F-Number, Block)</h3>
+      <p class="page-intro">The OPLL spells a pitch as a 9-bit <b>F-Number</b> and a 3-bit <b>Block</b>
+        (octave): <code>f = F · fSAM / 2^(19−Block)</code>, with
+        <code>fSAM = 3 579 545 / 72 ≈ 49 716 Hz</code>. Type a note or a frequency;
+        the encoder picks the smallest Block that keeps F-Number ≤ 511.</p>
+      <div class="calc calc-grid" id="calc">
+        <div class="calc-rows">
+          <label class="calc-row">MIDI note <input type="number" min="0" max="127" step="1" data-midi></label>
+          <label class="calc-row">Frequency (Hz) <input type="number" min="0" max="20000" step="1" data-hz></label>
+          <button type="button" class="btn btn-small" data-hear>♪ Hear it on ch1</button>
+        </div>
+        <p class="calc-out" data-out></p>
+      </div>
+    </section>
+
+    <section id="multiple">
+      <h3 class="sub-title">The Multiple table</h3>
+      <p class="page-intro">Each operator's frequency is its pitch times a <b>Multiple</b> (the low
+        nibble of byte <code>00</code>/<code>01</code>). The 16 settings are not
+        0…15 — index 0 means ×½, and a few values repeat:</p>
+      <div class="table-wrap">
+        <table class="ref-table ref-table-tight" id="mlTable">
+          <thead><tr><th>ML field</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="levels">
+      <h3 class="sub-title">Levels and the envelope</h3>
+      <p class="page-intro">Two things surprise people: the carrier's volume and the modulator's
+        Total Level count in <em>different</em> dB steps, and the envelope's
+        resolution is finer than either.</p>
+      <div class="table-wrap">
+        <table class="ref-table" id="levelTable">
+          <thead><tr><th>Field</th><th>Bits</th><th>Step</th><th>Full range</th><th>Notes</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="rom">
+      <h3 class="sub-title">The 15 ROM instruments</h3>
+      <p class="page-intro">Every ROM patch, decoded from its eight bytes into operator parameters,
+        with the harmonic fingerprint the core actually renders. Load any one onto
+        channel 1 to hear it.</p>
+      <div class="gallery" id="gallery"></div>
+    </section>
+
+    <section id="family">
+      <h3 class="sub-title">OPLL, OPL, and the VRC7</h3>
+      <div class="note-box">
+        <p>
+          The YM2413 (OPLL) is the <b>cut-down</b> member of Yamaha's OPL family.
+          The full <b>OPL / OPL2</b> (YM3526 / YM3812) give every channel its own
+          editable patch and more waveforms; the OPLL trades that away for a
+          <b>ROM of 15 fixed instruments + one user patch</b> and a smaller die —
+          which is exactly what made it cheap enough to put in the MSX's FM-PAC and
+          built-in MSX-MUSIC. It is <em>not</em> MSX-AUDIO (the Y8950 / OPL), a
+          different, richer chip.
+        </p>
+        <p>
+          The Konami <b>VRC7</b> in some Famicom cartridges is an OPLL variant with
+          a <em>different</em> instrument ROM and six channels. This site models the
+          <b>YM2413 only</b> — the VRC7's sounds would need a second ROM and dilute
+          the MSX focus.
+        </p>
+      </div>
+    </section>
+
+    <section id="sources">
+      <h3 class="sub-title">Sources</h3>
+      <div class="note-box">
+        <p>
+          Behaviour and the published tables are drawn from Yamaha's YM2413
+          application manual, cross-checked against Mitsutaka Okazaki's
+          <b>emu2413</b> (MIT) and <b>openMSX</b> (GPL2), and the <b>MSX Wiki</b>.
+          The synth here is a <b>clean-room model written from the documented
+          behaviour</b> — the instrument-ROM data and the chip's published tables
+          are reproduced as <em>data</em>, with attribution; no emulator code is
+          copied. See the repo's
+          <a href="https://github.com/andete/msx-edu-opll/blob/main/reference/opll-registers.md">reference/opll-registers.md</a>
+          and <a href="https://github.com/andete/msx-edu-opll/blob/main/docs/SOURCES.md">docs/SOURCES.md</a>.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer data-shell-footer></footer>
+
+  <script type="module" src="js/pages/reference.js"></script>
+</body>
+</html>

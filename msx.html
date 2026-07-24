@@ -25,17 +25,16 @@
       between them.
     </p>
 
-    <div class="formula">
-      <div class="formula-body" id="lastWrite">LD A,30h · OUT (7Ch),A · LD A,00h · OUT (7Dh),A</div>
-      <span class="formula-note">the last register this page wrote</span>
-    </div>
-
     <p class="page-intro">
       That is the whole hardware interface. The FM-PAC cartridge and the built-in
       MSX-MUSIC of MSX2+/turboR both expose it at the same ports; a small
       <b>FM-BIOS</b> in the cartridge ROM wraps these writes for BASIC, but the
-      ports underneath are what every driver actually uses.
+      ports underneath are what every driver actually uses. The listing below is
+      the exact sequence for whatever the chip is doing <em>right now</em> — change
+      anything on any page and it rewrites itself.
     </p>
+
+    <div id="code"></div>
 
     <div class="note-box warn-box">
       <h3>Write-only: the shadow copy is not optional</h3>

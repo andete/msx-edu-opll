@@ -1,8 +1,10 @@
 # msx-edu-opll — session handover
 
-Written 2026-07-24, at the end of **Phase 7 (the multi-page split)**. Read this
-first, then [build-plan.md](build-plan.md) (the spec) and
-[../reference/opll-registers.md](../reference/opll-registers.md) (the chip truth).
+Written 2026-07-24, at the end of **Phase 8 (MSX code view + Reference +
+polish)** — the site is now feature-complete against the build plan (only the
+deferred VGM player remains). Read this first, then [build-plan.md](build-plan.md)
+(the spec) and [../reference/opll-registers.md](../reference/opll-registers.md)
+(the chip truth).
 This project teaches the Yamaha **YM2413 (OPLL)** FM chip as a static, no-build web
 app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 [../../msx-edu-meta/META-PLAN.md](../../msx-edu-meta/META-PLAN.md).
@@ -12,13 +14,14 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 - **Done:** R (research/reference), D (design), 0+1 (vertical slice — one voice
   sounding), 2 (ADSR envelope + live scope), 3 (FM — the second operator),
   4 (the whole patch + the ROM gallery), 5 (nine voices), 6 (rhythm mode),
-  **7 (the multi-page split)**.
+  7 (the multi-page split), **8 (MSX code view + Reference + polish)**. All eight
+  build phases are complete; only the deferred VGM player remains (see below).
 - **Live site:** serve the folder and open [../index.html](../index.html) (the
   landing page). The chain is [Tone](../tone.html) → [Envelope](../envelope.html)
   → [FM](../fm.html) → [Instrument](../instrument.html) → [Voices](../voices.html)
-  → [Rhythm](../rhythm.html) → [MSX](../msx.html); [Explore](../explore.html) is
-  the full sandbox (now with click-to-focus). Reference is a Phase-8 stub
-  (`ready:false`, shown "soon").
+  → [Rhythm](../rhythm.html) → [MSX](../msx.html); off-chain are
+  [Explore](../explore.html) (the full sandbox, click-to-focus) and
+  [Reference](../reference.html). No `ready:false` pages remain.
   ```bash
   python3 -m http.server
   ```
@@ -49,6 +52,41 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   SharedArrayBuffer, no COOP/COEP.
 - **Knowledge layer:** [../js/opll-spec.js](../js/opll-spec.js) — register
   metadata, note↔(F-Number,Block), and (added in Phase 3) `harmonics()`.
+
+## What Phase 8 added (files)
+
+- [../js/components/code-view.js](../js/components/code-view.js) — the **live Z80
+  code view**, mounted on the MSX page. `createCodeView(el)` regenerates the exact
+  `OUT (7Ch)/(7Dh)` sequence (each register = `ld a,#RR / out (#7c),a / ld a,#VV /
+  out (#7d),a`) from the register file on every store change, with decoded
+  comments (instrument names, the Hz a channel's F-Number/Block makes, the rhythm
+  key bits). A checkbox filters to keyed channels; a Copy button lifts the plain
+  text. Much simpler than the SCC's version — no bank-switch, no wave tables.
+- [../reference.html](../reference.html) + [../js/pages/reference.js](../js/pages/reference.js)
+  — the **Reference** page (flipped `ready:false`→ready in `shell.js`). A TOC and
+  eight sections, **all computed, none transcribed**: the register map; the eight
+  patch bytes bit-by-bit (matches `decodePatch` exactly); a **note↔(F-Number,Block)
+  calculator** (MIDI/Hz two-way, shows the chip's actual frequency + cents error +
+  the F-Number step size, with a "hear it on ch1"); the **Multiple** table (from
+  `ML2`, shown as the real ×½…×15 multipliers); the **level/envelope** table
+  (steps pulled from `OpllCore.VOL_STEP_DB` 3.0 / `TL_STEP_DB` 0.75 / `EG_STEP_DB`
+  0.375); the **15 ROM instruments** as a gallery — each decoded (mod ML/TL/FB, car
+  ML) with its harmonic **fingerprint** from `instrumentFingerprint(n)` and a
+  load-into-ch1 button; the OPL-family / VRC7 note; and sources. Fingerprints
+  redraw on resize + theme flip.
+- [../msx.html](../msx.html) / [../js/pages/msx.js](../js/pages/msx.js) — the lean
+  Phase-7 prose page now mounts the real code view (replacing the one-line "last
+  write" echo).
+- [../css/styles.css](../css/styles.css) — Phase-8 chrome: `panel-code` /
+  `code-block` (syntax colours `c-op`/`c-num`/`c-cmt`), the `ref-table` family,
+  `toc`, `calc-*`, `gallery`/`gal-*`, plus a global `:focus-visible` ring and a
+  `max-width:680px` header/`#main` tightening (the a11y/mobile pass).
+- **Core untouched** — still 52 checks green. The Reference numbers are validated
+  by construction (same modules as the synth); the acceptance "every calculator
+  agrees with opll-spec.js" holds because they *are* opll-spec.js.
+- **Note:** the reference gallery / calculator "hear it" buttons key ch1 on and
+  leave it ringing (stop from the header) — same model as the SCC's reference, and
+  fine for a lookup page.
 
 ## What Phase 7 added (files)
 
@@ -248,24 +286,29 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   stalls and the viz loop freezes. Drive it with screenshots (which repaint) or
   synchronous JS + a screenshot, not rAF-based waits.
 
-## What's next (build-plan §5)
+## What's next
 
-- **Phase 8 — MSX context + reference + polish.** The MSX page is currently lean
-  prose + a live `OUT` echo; Phase 8 adds the real **`components/code-view.js`**
-  (the exact `OUT (7Ch)/(7Dh)` sequence for the current state). Build the
-  **`reference.html`** page (flip `ready:false`→ready in `shell.js` `PAGES`): the
-  register map, the full **instrument-ROM table decoded**, calculators
-  (note↔(F-Number,Block), envelope-rate→time, the Multiple table), the OPL-family
-  note. Then the mobile/keyboard/a11y pass and cross-links.
-- **Deferred: the VGM tune player** (see below) — its own step, retarget the SCC's
-  `vgm.js` + `pages/tune.js` + `assets/demo.vgm`. Add it as a `PAGES` entry
-  (`transport:false`, like the SCC's Tune page).
+All eight build-plan phases are done. The one remaining planned feature:
 
-### Phase-7 seams left for later
+- **Deferred: the VGM tune player** (build-plan §7.1). Its own step: retarget the
+  SCC's `js/vgm.js` + `js/pages/tune.js` + `assets/demo.vgm` +
+  `tools/make-demo-vgm.mjs` (copy-don't-factor). Decode OPLL VGM writes (`0x51`)
+  into `store.set`/`writeReg`; **forward the PSG drum track (`0xA0`) to a borrowed
+  `msx-edu-psg` worklet**; name any other declared chip and leave it silent. Add it
+  as a `PAGES` entry with `transport:false` (like the SCC's Tune page — it carries
+  its own play/pause/rewind, so the shell's header transport is suppressed and
+  play-on-edit must be gated off for it). See the VGM memory note.
+
+### Seams / notes for later
 - The chain pages seed registers on load; there is no cross-page state (each HTML
   is a fresh document). Fine — matches the siblings.
 - `color-mix()` is used for two signal-path stroke tints; it degrades to the
   default border on ancient engines (harmless).
+- **Browser-pane gotcha (verifying):** the in-app browser pane pauses painting
+  when hidden, so a screenshot taken right after a programmatic `scrollIntoView`
+  to a mid-page dark section can come back all-black even though the DOM is fine.
+  Verify with DOM/`getImageData` reads (authoritative), or screenshot only after a
+  fresh navigate / `scrollTo(0,0)`.
 
 ### Deferred: the VGM "load a file" tune player
 

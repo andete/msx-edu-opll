@@ -70,7 +70,7 @@ export const PAGES = [
     lede: 'The whole chip, every widget, all nine voices',
   },
   {
-    id: 'reference', title: 'Reference', href: 'reference.html', ready: false,
+    id: 'reference', title: 'Reference', href: 'reference.html',
     lede: 'Register map, the instrument ROM, calculators, sources',
   },
 ];
