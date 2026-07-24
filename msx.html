@@ -21,17 +21,17 @@
       On a real MSX, the Z80 reaches the YM2413 through just two I/O ports:
       <code>7Ch</code> (the address latch) and <code>7Dh</code> (the data). To set
       a register you write the register number to <code>7Ch</code>, then the value
-      to <code>7Dh</code> — two <code>OUT</code> instructions, with a short settle
+      to <code>7Dh</code>: two <code>OUT</code> instructions, with a short settle
       between them.
     </p>
 
     <p class="page-intro">
-      That is the whole hardware interface. The FM-PAC cartridge and the built-in
-      MSX-MUSIC of MSX2+/turboR both expose it at the same ports; a small
-      <b>FM-BIOS</b> in the cartridge ROM wraps these writes for BASIC, but the
-      ports underneath are what every driver actually uses. The listing below is
-      the exact sequence for whatever the chip is doing <em>right now</em> — change
-      anything on any page and it rewrites itself.
+      Those two ports are the whole hardware interface. The FM-PAC cartridge and
+      the built-in MSX-MUSIC of MSX2+/turboR both expose it at the same ports; a
+      small <b>FM-BIOS</b> in the cartridge ROM wraps these writes for BASIC, but
+      the ports underneath are what every driver actually uses. The listing below
+      is the exact sequence for whatever the chip is doing <em>right now</em>;
+      change anything on any page and it rewrites itself.
     </p>
 
     <div id="code"></div>

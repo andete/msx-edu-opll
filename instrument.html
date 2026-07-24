@@ -17,18 +17,17 @@
 
     <h2 class="page-title"><span class="page-n">4</span> Instrument</h2>
     <p class="page-intro">
-      Everything so far — the two operators, their Multiples and levels, both
-      envelopes, feedback, the waveforms — is <b>eight bytes</b>. That is a
-      complete OPLL patch, registers <code>00</code>–<code>07</code>. The catch
-      that defines the chip: you get <b>one</b> such user patch. The other fifteen
-      instruments are fixed in <b>ROM</b>.
+      Everything so far (the two operators, their Multiples and levels, both
+      envelopes, feedback, the waveforms) is <b>eight bytes</b>: a complete OPLL
+      patch, registers <code>00</code>–<code>07</code>. You get <b>one</b> such
+      user patch to edit; the other fifteen instruments are fixed in <b>ROM</b>.
+      That constraint is what defines the chip.
     </p>
     <p class="page-intro">
       Pick a ROM instrument from the gallery and play it; each tile shows its
       harmonic fingerprint. Then hit <b>copy → user ✎</b> to drop that ROM's eight
-      bytes into your editable slot — now the same sound is yours to take apart.
-      That is how the fixed ROM turns from a limitation into "here is what Yamaha
-      drew; now edit it."
+      bytes into your editable slot, and the same sound becomes yours to take
+      apart. The fixed ROM stops being a limitation and turns into a starting point.
     </p>
 
     <div id="patch"></div>
@@ -45,8 +44,8 @@
       <p>
         Instrument <code>0</code> on any channel means "use the eight user bytes";
         <code>1</code>–<code>15</code> select a ROM patch. The operator controls
-        here always edit the <b>user</b> bytes — while a ROM instrument is selected
-        they are shown for reference but change nothing, which is exactly why
+        here always edit the <b>user</b> bytes. While a ROM instrument is selected
+        they are shown for reference but change nothing, which is why
         <b>copy → user</b> exists.
       </p>
     </div>

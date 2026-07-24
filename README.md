@@ -1,10 +1,9 @@
 # OPLL Playground
 
-An **interactive, educational** tour of the Yamaha **YM2413 (OPLL)** — the
-2-operator FM chip behind **MSX-MUSIC** (the FM-PAC cartridge and the built-in FM
-of MSX2+ / turboR). Watch two operators modulate each other, shape an ADSR
-envelope, pick from the 15 ROM instruments or build your own, and hear the
-result — entirely in your browser.
+An interactive tour of the Yamaha **YM2413 (OPLL)**, the 2-operator FM chip behind
+**MSX-MUSIC** (the FM-PAC cartridge and the built-in FM of MSX2+ / turboR). Watch
+two operators modulate each other, shape an ADSR envelope, pick from the 15 ROM
+instruments or build your own, and hear the result, all in the browser.
 
 > **Status: complete.** All eight build phases plus the VGM tune player are done.
 > The site is a landing page whose hero is the clickable, live **signal-path
@@ -26,13 +25,13 @@ result — entirely in your browser.
 > two-way bound to the write-only register file; the DSP core is guarded by
 > `node tools/verify-core.mjs` (**52 checks**).
 
-Unlike an emulator (which hides the chip behind a black box) or a datasheet
-(which never makes a sound), this exposes the chip's *internal signal path* — the
-phase generator, the two FM operators with their log-sin/exp cores, the per-operator
-ADSR envelope, the instrument ROM, rhythm mode and the 9-bit DAC — as things you
-can poke and observe.
+An emulator hides the chip behind a black box and a datasheet never makes a sound.
+This site shows the chip's *internal signal path* instead — the phase generator,
+the two FM operators with their log-sin/exp cores, the per-operator ADSR envelope,
+the instrument ROM, rhythm mode and the 9-bit DAC — as things you can change while
+it plays.
 
-Part of the **msx-edu-\*** family — the shared recipe lives in
+Part of the **msx-edu-\*** family; the shared recipe lives in
 **[msx-edu-meta](../msx-edu-meta/META-PLAN.md)**:
 
 - **[msx-edu-psg](../msx-edu-psg/README.md)** — the MSX1 AY-3-8910 PSG.
@@ -44,9 +43,8 @@ Part of the **msx-edu-\*** family — the shared recipe lives in
 - **2-operator FM.** Each of 9 voices is a *modulator* shaping a *carrier's*
   phase — the first properly *synthesised* chip in the family, after the PSG's
   fixed squares and the SCC's drawn wavetables.
-- **15 sounds in ROM, 1 you build.** The defining constraint: you mostly *pick* an
-  instrument rather than design it — and the one user patch is where FM patch
-  design is taught.
+- **15 sounds in ROM, 1 you build.** You mostly *pick* an instrument rather than
+  design it, and the one user patch is where FM patch design is taught.
 - **A real ADSR per operator** — attack, decay, sustain, release — with a Key-On
   "damp" quirk and key-scaled rates.
 - **Rhythm mode** turns 3 melodic channels into 5 drums, driven by a noise LFSR.

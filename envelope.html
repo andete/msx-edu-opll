@@ -17,18 +17,19 @@
 
     <h2 class="page-title"><span class="page-n">2</span> Envelope</h2>
     <p class="page-intro">
-      A tone that snaps on and off is a buzzer. What makes an operator a
-      <em>voice</em> is its <b>ADSR</b> envelope: it <b>Attacks</b> to full level,
+      An operator on its own just switches on and off. Its <b>ADSR</b> envelope is
+      what turns that into a <em>voice</em>: it <b>Attacks</b> to full level,
       <b>Decays</b> to a <b>Sustain</b>, holds while the key is down, then
-      <b>Releases</b>. Every operator has its own — and on the carrier, the
-      envelope is the note's loudness over time.
+      <b>Releases</b>. Every operator has its own; on the carrier, the envelope is
+      the note's loudness over time.
     </p>
     <p class="page-intro">
       Hold a key and watch the dot ride the curve. Two OPLL quirks show up here:
       the <b>Key-On damp</b> (the level first dips toward silence before the attack
-      climbs, so a re-keyed note doesn't click), and <b>EG-type</b> — a
-      <em>sustained</em> operator (EG&nbsp;1) holds at the sustain level forever,
-      while a <em>percussive</em> one (EG&nbsp;0) keeps decaying to nothing.
+      climbs, so a re-keyed note doesn't click), and <b>EG-type</b>: a
+      <em>sustained</em> operator (EG&nbsp;1) holds at the sustain level for as long
+      as the key is down, while a <em>percussive</em> one (EG&nbsp;0) keeps
+      decaying to nothing.
     </p>
 
     <div class="scope-wrap viz-adsr"><canvas id="adsr" class="scope adsr-canvas" aria-label="ADSR envelope"></canvas></div>
@@ -40,11 +41,11 @@
     <div class="note-box">
       <h3>The two step-sizes, and Key Scaling</h3>
       <p>
-        The envelope lives in the <b>attenuation</b> domain — it counts <em>down</em>
+        The envelope lives in the <b>attenuation</b> domain: it counts <em>down</em>
         toward loud and <em>up</em> toward silence, in steps of 0.375&nbsp;dB.
         <b>Key Scaling of Rate</b> (KSR) makes higher notes run their envelopes
-        faster, the way a real string's high notes decay quicker than its low
-        ones — press a high key and a low one and watch the attack speed differ.
+        faster, the way a real string's high notes decay quicker than its low ones.
+        Press a high key and a low one and watch the attack speed differ.
       </p>
     </div>
 

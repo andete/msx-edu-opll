@@ -18,14 +18,14 @@
     <h2 class="page-title"><span class="page-n">1</span> Tone</h2>
     <p class="page-intro">
       Strip the OPLL down to one operator and it does the simplest thing a
-      synthesiser can: it reads a <b>sine</b> table around and around. What that
-      costs you is a <b>pitch</b>, and the OPLL spells pitch as two numbers — a
-      9-bit <b>F-Number</b> and a 3-bit <b>Block</b> (the octave).
+      synthesiser can: it reads a <b>sine</b> table around and around. To do that
+      it needs a <b>pitch</b>, and the OPLL spells pitch as two numbers: a 9-bit
+      <b>F-Number</b> and a 3-bit <b>Block</b> (the octave).
     </p>
     <p class="page-intro">
       Drag the F-Number and Block below and watch the wave stretch. The
-      <b>Multiple</b> control multiplies the operator's frequency by a fixed
-      ratio — the first hint of how FM builds a timbre from one oscillator.
+      <b>Multiple</b> control multiplies the operator's frequency by a fixed ratio,
+      the first hint of how FM builds a timbre from one oscillator.
     </p>
 
     <div class="scope-wrap"><canvas id="scope" class="scope" aria-label="Operator waveform"></canvas></div>
@@ -50,7 +50,7 @@
         shifts it by whole octaves, cheaply, as a bit-shift. It is the same
         floating-point-ish trick the whole OPL family uses: a mantissa
         (<code>F</code>) and an exponent (<code>Block</code>). Doubling the Block
-        doubles the frequency — one octave up — without touching the F-Number.
+        doubles the frequency (one octave up) without touching the F-Number.
       </p>
     </div>
 
