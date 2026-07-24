@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Explore — the whole OPLL | OPLL Playground</title>
+  <meta name="description" content="The full YM2413 sandbox: nine FM voices, the operator pair, harmonics, ADSR, the instrument gallery, rhythm mode, and the live register file.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e8a86'/%3E%3Cpath d='M4 16 q4 -10 8 0 t8 0 t8 0' fill='none' stroke='%23aef2ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/opll-core.js"></script>
+</head>
+<body>
+  <header data-shell-header></header>
+
+  <main id="main">
+    <h2 class="page-title">Explore</h2>
+    <p class="page-intro">
+      The whole chip in one place. The deep-dive widgets follow one <b>focus
+      voice</b> — click any strip in the <b>Voices</b> mixer to expand it here.
+      The keyboard is polyphonic across all nine channels; flip <b>Rhythm mode</b>
+      to turn channels 7-9 into drums.
+    </p>
+
+    <div class="stage">
+      <p class="focus-line" id="focusLine"></p>
+
+      <div id="pair" class="scope-wrap"></div>
+
+      <div class="viz-row">
+        <div class="scope-wrap">
+          <canvas id="harmonics" class="scope"></canvas>
+        </div>
+        <div class="scope-wrap viz-adsr">
+          <canvas id="adsr" class="scope adsr-canvas"></canvas>
+        </div>
+      </div>
+
+      <div class="panels" id="focusPanels">
+        <div id="pitch"></div>
+        <div id="operator-mod"></div>
+        <div id="operator-car"></div>
+      </div>
+
+      <div id="patch"></div>
+
+      <section class="rhythm-section">
+        <h2 class="section-title">
+          Rhythm
+          <span class="section-sub">0E bit 5 — six melodic voices + five drums, at +3 dB</span>
+        </h2>
+        <div id="rhythm"></div>
+      </section>
+
+      <section class="voices-section">
+        <h2 class="section-title">
+          Voices
+          <span class="section-sub">nine independent FM channels — click a strip to focus it above</span>
+        </h2>
+        <div id="voices" class="voices-grid"></div>
+      </section>
+
+      <div data-shell-tools></div>
+    </div>
+  </main>
+
+  <footer data-shell-footer></footer>
+
+  <script type="module" src="js/pages/explore.js"></script>
+</body>
+</html>

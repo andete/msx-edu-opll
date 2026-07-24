@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhythm — one bit turns three voices into five drums | OPLL Playground</title>
+  <meta name="description" content="Set bit 5 of register 0E and the OPLL's channels 7-9 become five drums — bass, snare, tom, cymbal, hi-hat — driven by a shared noise generator.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e8a86'/%3E%3Cpath d='M4 16 q4 -10 8 0 t8 0 t8 0' fill='none' stroke='%23aef2ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/opll-core.js"></script>
+</head>
+<body>
+  <header data-shell-header></header>
+
+  <main id="main" class="focus-page">
+    <nav data-chain-dots></nav>
+
+    <h2 class="page-title"><span class="page-n">6</span> Rhythm</h2>
+    <p class="page-intro">
+      One bit changes what the chip <em>is</em>. Set <b>bit 5 of register
+      <code>0E</code></b> and channels 7, 8 and 9 stop being melodic: they become
+      five drums — <b>Bass</b>, <b>Snare</b>, <b>Tom</b>, <b>Cymbal</b> and
+      <b>Hi-Hat</b> — each keyed by its own bit of <code>0E</code>, voiced by fixed
+      rhythm patches and a shared <b>noise generator</b>, and mixed a touch louder
+      (+3&nbsp;dB). Channels 1-6 stay melodic on the keyboard.
+    </p>
+    <p class="page-intro">
+      Arm <b>Rhythm mode</b> below, then hit the pads or run the <b>demo beat</b>.
+      Each drum has a level (the <code>36</code>–<code>38</code> nibbles); watch
+      them, and the <code>0E</code> key bits, in the register file.
+    </p>
+
+    <div class="scope-wrap"><canvas id="scope" class="scope" aria-label="Rhythm output"></canvas></div>
+
+    <div id="rhythm"></div>
+
+    <div class="note-box">
+      <h3>Where a drum comes from</h3>
+      <p>
+        The <b>Bass Drum</b> is just an ordinary two-operator voice on the ROM's
+        bass-drum patch. The metallic voices are stranger: the <b>Snare</b>,
+        <b>Hi-Hat</b> and <b>Cymbal</b> mix a <b>23-bit noise</b> generator with
+        fixed phase points to read pitched-yet-gritty tones, and the hi-hat and
+        cymbal <em>share</em> a phase generator — which is why the cymbal's
+        brightness depends on the hi-hat operator still running.
+      </p>
+    </div>
+
+    <div id="challenges"></div>
+    <div data-shell-tools></div>
+    <nav data-chain-nav></nav>
+  </main>
+
+  <footer data-shell-footer></footer>
+
+  <script type="module" src="js/pages/rhythm.js"></script>
+</body>
+</html>

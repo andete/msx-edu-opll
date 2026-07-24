@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tone — one operator, a sine | OPLL Playground</title>
+  <meta name="description" content="One OPLL operator makes a plain sine. Its pitch is an F-Number and a Block: f = F · fSAM / 2^(19−Block). Tune it and watch the wave.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e8a86'/%3E%3Cpath d='M4 16 q4 -10 8 0 t8 0 t8 0' fill='none' stroke='%23aef2ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/opll-core.js"></script>
+</head>
+<body>
+  <header data-shell-header></header>
+
+  <main id="main" class="focus-page">
+    <nav data-chain-dots></nav>
+
+    <h2 class="page-title"><span class="page-n">1</span> Tone</h2>
+    <p class="page-intro">
+      Strip the OPLL down to one operator and it does the simplest thing a
+      synthesiser can: it reads a <b>sine</b> table around and around. What that
+      costs you is a <b>pitch</b>, and the OPLL spells pitch as two numbers — a
+      9-bit <b>F-Number</b> and a 3-bit <b>Block</b> (the octave).
+    </p>
+    <p class="page-intro">
+      Drag the F-Number and Block below and watch the wave stretch. The
+      <b>Multiple</b> control multiplies the operator's frequency by a fixed
+      ratio — the first hint of how FM builds a timbre from one oscillator.
+    </p>
+
+    <div class="scope-wrap"><canvas id="scope" class="scope" aria-label="Operator waveform"></canvas></div>
+
+    <div class="formula">
+      <div class="formula-body">
+        <b>f</b> = <b>F</b> · <b>fSAM</b> / 2<sup>(19&#8722;Block)</sup>
+        &#160;&#160;→&#160;&#160;<span data-freq>—</span>
+      </div>
+      <span class="formula-note">A4 is F-Number 290, Block 4 → 440 Hz.</span>
+    </div>
+
+    <div class="panels">
+      <div id="pitch"></div>
+      <div id="operator"></div>
+    </div>
+
+    <div class="note-box">
+      <h3>Why two numbers for one pitch?</h3>
+      <p>
+        The F-Number sets the frequency <em>within</em> an octave; the Block
+        shifts it by whole octaves, cheaply, as a bit-shift. It is the same
+        floating-point-ish trick the whole OPL family uses: a mantissa
+        (<code>F</code>) and an exponent (<code>Block</code>). Doubling the Block
+        doubles the frequency — one octave up — without touching the F-Number.
+      </p>
+    </div>
+
+    <div id="challenges"></div>
+    <div data-shell-tools></div>
+    <nav data-chain-nav></nav>
+  </main>
+
+  <footer data-shell-footer></footer>
+
+  <script type="module" src="js/pages/tone.js"></script>
+</body>
+</html>

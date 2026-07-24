@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Voices — nine independent FM channels | OPLL Playground</title>
+  <meta name="description" content="The OPLL has nine FM voices, each with its own instrument, volume and pitch. Play a chord and watch a voice allocator hand each note a channel.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e8a86'/%3E%3Cpath d='M4 16 q4 -10 8 0 t8 0 t8 0' fill='none' stroke='%23aef2ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/opll-core.js"></script>
+</head>
+<body>
+  <header data-shell-header></header>
+
+  <main id="main" class="focus-page">
+    <nav data-chain-dots></nav>
+
+    <h2 class="page-title"><span class="page-n">5</span> Voices</h2>
+    <p class="page-intro">
+      One FM voice is a sound; <b>nine</b> is an instrument. Each channel has its
+      own instrument, volume and pitch — the register file just repeats the same
+      layout nine times (<code>10</code>–<code>18</code>, <code>20</code>–<code>28</code>,
+      <code>30</code>–<code>38</code>). Play a chord on the keyboard and a
+      <b>voice allocator</b> hands each held note a free channel, stealing the
+      oldest when all nine are busy — exactly what an MSX-MUSIC driver does.
+    </p>
+
+    <div class="scope-wrap"><canvas id="scope" class="scope" aria-label="Mixed output"></canvas></div>
+
+    <section class="voices-section">
+      <h2 class="section-title">
+        The nine channels
+        <span class="section-sub">give each its own instrument, level and pitch</span>
+      </h2>
+      <div id="voices" class="voices-grid"></div>
+    </section>
+
+    <div class="note-box">
+      <h3>Nine, then six</h3>
+      <p>
+        Nine is the melodic maximum. The next stage spends three of them: switch
+        on rhythm mode and channels 7-9 become a drum kit, leaving six melodic
+        voices. That is why so much MSX-MUSIC you hear is six-note polyphony plus
+        drums.
+      </p>
+    </div>
+
+    <div id="challenges"></div>
+    <div data-shell-tools></div>
+    <nav data-chain-nav></nav>
+  </main>
+
+  <footer data-shell-footer></footer>
+
+  <script type="module" src="js/pages/voices.js"></script>
+</body>
+</html>

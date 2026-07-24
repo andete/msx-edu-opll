@@ -1,7 +1,7 @@
 # msx-edu-opll — session handover
 
-Written 2026-07-24, at the end of **Phase 6 (rhythm mode)**. Read this first, then
-[build-plan.md](build-plan.md) (the spec) and
+Written 2026-07-24, at the end of **Phase 7 (the multi-page split)**. Read this
+first, then [build-plan.md](build-plan.md) (the spec) and
 [../reference/opll-registers.md](../reference/opll-registers.md) (the chip truth).
 This project teaches the Yamaha **YM2413 (OPLL)** FM chip as a static, no-build web
 app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
@@ -11,10 +11,14 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 - **Done:** R (research/reference), D (design), 0+1 (vertical slice — one voice
   sounding), 2 (ADSR envelope + live scope), 3 (FM — the second operator),
-  4 (the whole patch + the ROM gallery), 5 (nine voices), **6 (rhythm mode)**.
-- **Live sandbox:** [../index.html](../index.html) — nine polyphonic FM channels
-  + the rhythm kit (the deep-dive widgets still focus channel 1 / index 0). Serve
-  the folder and open it:
+  4 (the whole patch + the ROM gallery), 5 (nine voices), 6 (rhythm mode),
+  **7 (the multi-page split)**.
+- **Live site:** serve the folder and open [../index.html](../index.html) (the
+  landing page). The chain is [Tone](../tone.html) → [Envelope](../envelope.html)
+  → [FM](../fm.html) → [Instrument](../instrument.html) → [Voices](../voices.html)
+  → [Rhythm](../rhythm.html) → [MSX](../msx.html); [Explore](../explore.html) is
+  the full sandbox (now with click-to-focus). Reference is a Phase-8 stub
+  (`ready:false`, shown "soon").
   ```bash
   python3 -m http.server
   ```
@@ -45,6 +49,57 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   SharedArrayBuffer, no COOP/COEP.
 - **Knowledge layer:** [../js/opll-spec.js](../js/opll-spec.js) — register
   metadata, note↔(F-Number,Block), and (added in Phase 3) `harmonics()`.
+
+## What Phase 7 added (files)
+
+- [../js/shell.js](../js/shell.js) — **the site chrome**, one module for all ten
+  HTML files (copy-don't-factor sibling of the SCC's `shell.js`). Owns: the
+  `PAGES` **registry** (id/title/href, `chain` #, `lede`, `addrs`, `spot`,
+  `ready`), the header + nav, the **chain** prev/next + "you are here" dots, the
+  footer, and **`mountShell(pageId, opts)`** which also mounts the shared tool
+  strip (piano + spotlit register inspector) into `[data-shell-tools]`. The
+  header holds the **transport** (Play/Stop) and there is **play-on-edit** (first
+  gesture-carrying `reg` write starts the chip) — new here; the OPLL `audio.js`
+  didn't have it. `opts.keyboard`: `'focus'` (mono, last-note priority on ch1, for
+  Tone/Env/FM/Instrument), `'poly'` (VoiceAllocator, default), or `{channels:N}`
+  (Rhythm uses 6 melodic). Pages are still plain static docs; this runs at parse
+  time.
+- [../js/components/signal-path.js](../js/components/signal-path.js) — the OPLL
+  **block diagram** (inline SVG, clickable links = the site map): phase gen →
+  modulator —FM→ carrier → Σ → 9-bit DAC, with the instrument patch feeding both
+  operators, each operator's ADSR, and the rhythm branch. `render()` reads the
+  focus voice's pitch/instrument; `setLevels(mod,car,dac)` glows the operators and
+  the DAC bar from the live core. **Gotcha fixed:** it lives in `components/`, so
+  imports are `../store.js` / `../opll-spec.js` (a `./` typo 404'd the whole module
+  graph and left blank pages — nav/diagram absent, no console error, just "Failed
+  to fetch dynamically imported module" on manual import).
+- [../js/components/challenge.js](../js/components/challenge.js) — per-page
+  **self-checking tasks** (predicate over the store, re-tested on every change,
+  sticky once met). Ported from the SCC.
+- **The pages** — landing [../index.html](../index.html) +
+  [../js/pages/landing.js](../js/pages/landing.js) (hero = live signal path + a
+  5-note ROM chord button + chain cards); the six chain pages
+  [tone](../js/pages/tone.js) · [envelope](../js/pages/envelope.js) ·
+  [fm](../js/pages/fm.js) · [instrument](../js/pages/instrument.js) ·
+  [voices](../js/pages/voices.js) · [rhythm](../js/pages/rhythm.js), each seeding
+  its own registers, mounting only its widgets, spotlighting its addrs, with 2-3
+  challenges; a **lean** [msx](../js/pages/msx.js) (prose on 7Ch/7Dh + the
+  write-only shadow, and a live "last write → the two Z80 `OUT`s" echo — the full
+  interactive code-view is Phase 8); and [explore](../js/pages/explore.js) — the
+  old single-page sandbox, now with **click-a-strip-to-focus** any of the nine
+  voices (the `ChannelPanel.onFocus` seam from Phase 5, finally wired: it rebuilds
+  the pitch/operator/patch panels for the new channel and the viz loop reads
+  `focusCh`). **The old `js/pages/index.js` was removed** (replaced by landing +
+  explore).
+- [../css/styles.css](../css/styles.css) — appended the Phase-7 chrome (nav,
+  focus-page, chain dots/nav, note-box, challenges, tool strip, landing/hero/cards,
+  and the `sp-*` signal-path styles; modulator blocks tinted `--mod`, carrier
+  `--accent`). Reused the existing `.btn`/`.btn-play`/`kbd`.
+- **Scope of Phase 7:** the page split, per stated deliverable. **Reference** is a
+  `ready:false` stub. The rhythm page's scope renders the real mixed output via
+  `viz.process()` (drums aren't visible through `renderScope`/`channelSample`,
+  which are the melodic path). Core (`opll-core.js`) is **untouched** — 52 checks
+  still green.
 
 ## What Phase 6 added (files)
 
@@ -195,11 +250,22 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
 
 ## What's next (build-plan §5)
 
-- **Phase 7 — multi-page split** (`js/shell.js` registry + chrome,
-  `components/signal-path.js`, landing + the seven chain pages, the Explore
-  sandbox).
-- **Phase 8 — MSX context + reference + polish** (`code-view.js` for `7Ch`/`7Dh`,
-  the reference page, mobile/a11y).
+- **Phase 8 — MSX context + reference + polish.** The MSX page is currently lean
+  prose + a live `OUT` echo; Phase 8 adds the real **`components/code-view.js`**
+  (the exact `OUT (7Ch)/(7Dh)` sequence for the current state). Build the
+  **`reference.html`** page (flip `ready:false`→ready in `shell.js` `PAGES`): the
+  register map, the full **instrument-ROM table decoded**, calculators
+  (note↔(F-Number,Block), envelope-rate→time, the Multiple table), the OPL-family
+  note. Then the mobile/keyboard/a11y pass and cross-links.
+- **Deferred: the VGM tune player** (see below) — its own step, retarget the SCC's
+  `vgm.js` + `pages/tune.js` + `assets/demo.vgm`. Add it as a `PAGES` entry
+  (`transport:false`, like the SCC's Tune page).
+
+### Phase-7 seams left for later
+- The chain pages seed registers on load; there is no cross-page state (each HTML
+  is a fresh document). Fine — matches the siblings.
+- `color-mix()` is used for two signal-path stroke tints; it degrades to the
+  default border on ancient engines (harmless).
 
 ### Deferred: the VGM "load a file" tune player
 

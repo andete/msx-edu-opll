@@ -6,18 +6,19 @@ of MSX2+ / turboR). Watch two operators modulate each other, shape an ADSR
 envelope, pick from the 15 ROM instruments or build your own, and hear the
 result — entirely in your browser.
 
-> **Status:** **Phase 6 done** — **rhythm mode**. From [index.html](index.html):
-> one bit — `0E` bit 5 — flips the chip from **nine melodic voices** to **six
-> melodic + five drums** (Bass, Snare, Tom, Cymbal, Hi-Hat on channels 7–9), each
-> keyed by its own bit of `0E`, voiced by fixed rhythm patches and a shared **noise
-> LFSR**, and mixed **+3 dB**. The new **Rhythm** panel is that register made
-> playable: a mode switch, five hold-to-hit pads with a level each, and a looping
-> **demo beat** — while channels 1–6 stay melodic on the keyboard. Phase 5's
-> **Voices** mixer (nine polyphonic FM channels), and Phases 3–4 on the focus voice
-> (**channel 1**) — the ★ **operator-pair**, the **harmonic bars**, the **Instrument
-> gallery** — still apply. Everything is two-way bound to the write-only register
-> file. The DSP core (`opll-core.js`) is guarded by `node tools/verify-core.mjs`
-> (**52 checks**). Next phases add the page split and the MSX context — see
+> **Status:** **Phase 7 done** — **the multi-page split**. The single sandbox is
+> now a **site**: a landing page ([index.html](index.html)) whose hero is the
+> clickable, live **signal-path diagram**, and the seven-stage **chain** —
+> [Tone](tone.html) → [Envelope](envelope.html) → [FM](fm.html) →
+> [Instrument](instrument.html) → [Voices](voices.html) → [Rhythm](rhythm.html) →
+> [MSX](msx.html) — each a standalone page mounting only its own widgets, with a
+> **register spotlight**, self-checking **challenges**, and shared piano + register
+> inspector. [explore.html](explore.html) keeps the full sandbox (now with
+> click-to-**focus** any of the nine voices). Chrome, nav and the play-on-edit
+> transport live in one place ([js/shell.js](js/shell.js)). Everything is still
+> two-way bound to the write-only register file; the DSP core (`opll-core.js`) is
+> unchanged and guarded by `node tools/verify-core.mjs` (**52 checks**). Next:
+> Phase 8 — the MSX **code view**, the **Reference** page, and polish — see
 > [design/build-plan.md](design/build-plan.md).
 
 Unlike an emulator (which hides the chip behind a black box) or a datasheet

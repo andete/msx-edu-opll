@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MSX — reaching the chip over 7Ch / 7Dh | OPLL Playground</title>
+  <meta name="description" content="How the MSX's Z80 talks to the YM2413: two I/O ports, an address latch and a data write, and the write-only shadow copy a driver must keep.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e8a86'/%3E%3Cpath d='M4 16 q4 -10 8 0 t8 0 t8 0' fill='none' stroke='%23aef2ee' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="js/opll-core.js"></script>
+</head>
+<body>
+  <header data-shell-header></header>
+
+  <main id="main" class="focus-page">
+    <nav data-chain-dots></nav>
+
+    <h2 class="page-title"><span class="page-n">7</span> MSX</h2>
+    <p class="page-intro">
+      Everything you have changed on this site has been a <b>register write</b>.
+      On a real MSX, the Z80 reaches the YM2413 through just two I/O ports:
+      <code>7Ch</code> (the address latch) and <code>7Dh</code> (the data). To set
+      a register you write the register number to <code>7Ch</code>, then the value
+      to <code>7Dh</code> — two <code>OUT</code> instructions, with a short settle
+      between them.
+    </p>
+
+    <div class="formula">
+      <div class="formula-body" id="lastWrite">LD A,30h · OUT (7Ch),A · LD A,00h · OUT (7Dh),A</div>
+      <span class="formula-note">the last register this page wrote</span>
+    </div>
+
+    <p class="page-intro">
+      That is the whole hardware interface. The FM-PAC cartridge and the built-in
+      MSX-MUSIC of MSX2+/turboR both expose it at the same ports; a small
+      <b>FM-BIOS</b> in the cartridge ROM wraps these writes for BASIC, but the
+      ports underneath are what every driver actually uses.
+    </p>
+
+    <div class="note-box warn-box">
+      <h3>Write-only: the shadow copy is not optional</h3>
+      <p>
+        You cannot read the YM2413 back. There is no port that returns a
+        register's value — the chip only ever <em>accepts</em> writes. So any
+        driver that wants to change one bit of a register without disturbing the
+        others must keep its <b>own copy in RAM</b> of every byte it has written,
+        modify that, and send the whole byte again. The register file at the
+        bottom of every page on this site <em>is</em> that shadow copy — which is
+        why editing a single bit there works at all.
+      </p>
+    </div>
+
+    <div class="note-box">
+      <h3>What we do and don't model</h3>
+      <p>
+        This site models the <b>chip</b>: the operators, the envelopes, the ROM,
+        rhythm, the register file. It does <em>not</em> emulate the Z80, the
+        FM-BIOS, or the FM-PAC's SRAM, and it is not cycle-exact about the
+        bus timing between the two <code>OUT</code>s. The full interactive
+        <b>code view</b> — the exact <code>OUT (7Ch)/(7Dh)</code> sequence for the
+        current state — and the decoded reference tables arrive with the next
+        phase.
+      </p>
+    </div>
+
+    <div data-shell-tools></div>
+    <nav data-chain-nav></nav>
+  </main>
+
+  <footer data-shell-footer></footer>
+
+  <script type="module" src="js/pages/msx.js"></script>
+</body>
+</html>
