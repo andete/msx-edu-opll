@@ -35,11 +35,14 @@ const PATTERN = {
 const STEP_MS = 125;   // ~120 BPM sixteenths
 
 // Sensible fixed drum tuning, written once when rhythm mode is switched on:
-// {fnum, block} per channel 7/8/9 (a low thud, and two bright metallic pitches).
+// {fnum, block} per channel 7/8/9. Chosen for how the ROM patches multiply it —
+// e.g. the Tom operator (patch 18) has Multiple ×5, so channel 9 is tuned low so
+// the tom lands ~150 Hz, not shrill. Bass drum ~65 Hz; the snare/metal channels
+// sit high so the hats and cymbal read bright.
 const DRUM_TUNE = [
-  { ch: 6, fnum: 100, block: 2 },  // ch7 — Bass Drum
-  { ch: 7, fnum: 220, block: 5 },  // ch8 — Hi-Hat / Snare
-  { ch: 8, fnum: 180, block: 5 },  // ch9 — Tom / Cymbal
+  { ch: 6, fnum: 86,  block: 3 },  // ch7 — Bass Drum   (~65 Hz)
+  { ch: 7, fnum: 122, block: 4 },  // ch8 — Hi-Hat / Snare (snare body ~185 Hz)
+  { ch: 8, fnum: 80,  block: 2 },  // ch9 — Tom / Cymbal (tom ~150 Hz via ×5)
 ];
 
 export class RhythmPanel {

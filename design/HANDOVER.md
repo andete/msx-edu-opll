@@ -23,7 +23,7 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   ```bash
   node tools/verify-core.mjs
   ```
-  **46 checks** (24 core + 5 FM + 5 patch/gallery + 5 polyphony + 7 rhythm). It
+  **50 checks** (24 core + 5 FM + 5 patch/gallery + 5 polyphony + 11 rhythm). It
   asserts behaviour vs [reference §9, §12](../reference/opll-registers.md), not
   cycle-exact emu2413.
 
@@ -55,30 +55,41 @@ app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
   nibbles (`refreshRhythmLevels`: 36 = BD · 37 = HH·hi/SD·lo · 38 = TOM·hi/CYM·lo).
   `process` splits **6 melodic + 5 drums** when the mode is on. The **Bass Drum**
   is a plain 2-op voice (`channelSample(6)`); **Snare/Tom/Hi-Hat/Cymbal** are
-  single-operator slots synthesised in `rhythmSample` from a 23-bit noise **LFSR**
-  (`clockNoise`) and a clean-room **metallic** phase-bit square. Drums are +3 dB
-  (`RHYTHM_GAIN`, exported). Pitch/inst writes to ch7-9 are guarded so rhythm
-  levels/patches aren't clobbered, and the ch7-9 channel-key bits are ignored in
-  rhythm mode (drums key only via `0E`).
+  single-operator slots synthesised in `rhythmSample`. The **Tom** is a plain sine;
+  the **Snare/Hi-Hat/Cymbal** follow the documented OPLL rhythm algorithm — a
+  `hatCymGate` phase-bit comparison + the 23-bit noise **LFSR** (`clockNoise`) pick
+  an absolute **sine-table phase** (`drumWave`) each sample, so they read pitched-
+  yet-gritty, not as harsh squares. Drums are +3 dB (`RHYTHM_GAIN`, exported).
+  Pitch/inst writes to ch7-9 are guarded so rhythm levels/patches aren't clobbered,
+  and the ch7-9 channel-key bits are ignored in rhythm mode (drums key only via
+  `0E`).
 - [../js/panels/rhythm.js](../js/panels/rhythm.js) — the **Rhythm panel**: a mode
   switch (`0E` bit5), five hold-to-hit **pads** (each keys its `0E` bit; two-way
   bound so they light on any `0E` write), a **level** slider per drum → the 36/37/38
   nibbles, and a looping **demo beat** (a 16-step groove pulsed via `setInterval`,
   keying each hit off-then-on for a clean re-trigger). It writes drum **tuning**
-  into 16-18/26-28 once when the mode switches on. Pads are dead until rhythm mode
-  is armed.
+  into 16-18/26-28 once when the mode switches on — chosen for the ROM patch
+  Multiples: ch9 is tuned low because the Tom operator (patch 18) is Multiple ×5,
+  so the tom lands ~150 Hz instead of shrill; bass drum ~65 Hz. Pads are dead until
+  rhythm mode is armed.
 - [../index.html](../index.html) — the `#rhythm` section + Phase-6 note/badge.
 - [../css/styles.css](../css/styles.css) — the rhythm panel styles (mod-orange
   accent; `.drum-pads.armed` gates the pads; `.drum-pad.hit` is the lit state).
 - [../js/pages/index.js](../js/pages/index.js) — mounts `RhythmPanel`.
-- [../tools/verify-core.mjs](../tools/verify-core.mjs) — **§13**, 7 rhythm checks
-  (five drums audible; idle-vs-all; melodic 1-6 untouched; ch7-9 channel key dead;
-  +3 dB ratio == `RHYTHM_GAIN`; noise balanced + non-degenerate).
+- [../tools/verify-core.mjs](../tools/verify-core.mjs) — **§13**, 11 rhythm checks
+  (five drums audible; **tom low/tonal, BD lowest, hi-hat brighter** — these lock
+  the tuning that a first pass got wrong; idle-vs-all; melodic 1-6 untouched; ch7-9
+  channel key dead; rhythm + 6 melodic within headroom; +3 dB ratio ==
+  `RHYTHM_GAIN`; noise balanced + non-degenerate).
 - **Teaching-decision note (build-plan §7.3):** the drum synthesis is modelled
-  "faithfully enough to sound right and be inspectable", **not** cycle-exact. The
-  metallic hi-hat/cymbal generator (`metallic()`) is a compact clean-room
-  phase-bit square, not the emu2413 rhythm path. The noise **polynomial** (23-bit,
-  bit0⊕bit8) is treated as hardware data (like the ROM); the code is ours.
+  "faithfully enough to sound right and be inspectable", **not** cycle-exact — but
+  the metallic/snare voices DO follow the OPLL's documented rhythm algorithm (the
+  `hatCymGate` phase-bit comparison + sine-table lookup at the fixed drum phase
+  points `0x0d0/0x234/0x2d0/0x100/0x300/…`). Those constants and the 23-bit noise
+  **polynomial** (bit0⊕bit8) are reproduced as **behavioural data** from Okazaki's
+  emu2413 (the reference this project follows, §0), like the instrument ROM, with
+  attribution; the surrounding code is ours. A first pass used raw ±1 squares and
+  an uncompensated tom tuning — it sounded wrong; this is the fix.
 - **Known limitation (not a bug):** the polyphonic piano allocator
   ([../js/voices.js](../js/voices.js)) still round-robins all nine channels, so in
   rhythm mode it may hand a note to ch7-9 (now drums) where it stays silent —

@@ -371,21 +371,54 @@ console.log('\nNine voices (polyphony):');
 // +3 dB, leaving channels 1-6 melodic. (reference §9)
 console.log('\nRhythm mode (6 melodic + 5 drums):');
 {
-  // A rhythm kit at fixed tuning + full drum volume; render the given 0E keys.
-  function drumPeak(keyBits) {
-    const core = new OpllCore(CLOCK, SR);
+  // A rhythm kit at the panel's tuning + full drum volume; render the given 0E
+  // keys. The tuning matters: the Tom operator (patch 18) has Multiple ×5, so
+  // channel 9 is deliberately low or the tom turns shrill (a real past bug).
+  function kit(core, keyBits) {
     core.writeReg(0x0e, 0x20);                              // rhythm mode on
-    core.writeReg(0x16, 100); core.writeReg(0x26, 2 << 1);  // ch7 (BD) low
-    core.writeReg(0x17, 220); core.writeReg(0x27, 5 << 1);  // ch8 (HH/SD) high
-    core.writeReg(0x18, 180); core.writeReg(0x28, 5 << 1);  // ch9 (TOM/CYM)
+    core.writeReg(0x16, 86);  core.writeReg(0x26, 3 << 1);  // ch7 (BD) ~65 Hz
+    core.writeReg(0x17, 122); core.writeReg(0x27, 4 << 1);  // ch8 (HH/SD)
+    core.writeReg(0x18, 80);  core.writeReg(0x28, 2 << 1);  // ch9 (TOM/CYM)
     core.writeReg(0x36, 0x00); core.writeReg(0x37, 0x00); core.writeReg(0x38, 0x00); // loud
     core.writeReg(0x0e, 0x20 | keyBits);
-    return renderPeak(core, 0, 8192);
+  }
+  function drumBuf(keyBits, frames = 8192) {
+    const core = new OpllCore(CLOCK, SR);
+    kit(core, keyBits);
+    const buf = new Float32Array(frames); core.process(buf, frames);
+    return buf;
+  }
+  function drumPeak(keyBits) { let p = 0; for (const v of drumBuf(keyBits)) p = Math.max(p, Math.abs(v)); return p; }
+  // A crude dominant-frequency probe (zero-crossing rate) — enough to tell a low
+  // tonal drum from a shrill one, or noise from tone.
+  function domHz(keyBits) {
+    const buf = drumBuf(keyBits, 16384); let zc = 0;
+    for (let i = 1; i < buf.length; i++) if ((buf[i - 1] < 0) !== (buf[i] < 0)) zc++;
+    return (zc / 2) / (buf.length / SR);
   }
   const drums = [['Bass Drum', 0x10], ['Snare', 0x08], ['Tom', 0x04], ['Cymbal', 0x02], ['Hi-Hat', 0x01]];
   let allSound = true;
   for (const [name, bit] of drums) { const p = drumPeak(bit); if (!(p > 0.02)) { allSound = false; check(`${name} sounds`, false, `peak ${p.toFixed(4)}`); } }
   check('all five drums produce audible output on their key bit', allSound);
+
+  // Drum character/tuning: the tom is a low tonal drum (this would have failed at
+  // the old shrill ~1.3 kHz), the bass drum sits below it, and the hi-hat is far
+  // brighter than the tom (noise vs tone).
+  const bdF = domHz(0x10), tomF = domHz(0x04), hhF = domHz(0x01);
+  check('the tom is a low tonal drum, not shrill (< 300 Hz)', tomF < 300, `${tomF.toFixed(0)} Hz`);
+  check('the bass drum is the lowest voice (< tom, < 120 Hz)', bdF < 120 && bdF < tomF, `bd ${bdF.toFixed(0)} < tom ${tomF.toFixed(0)} Hz`);
+  check('the hi-hat is far brighter than the tom', hhF > tomF * 4, `hh ${hhF.toFixed(0)} vs tom ${tomF.toFixed(0)} Hz`);
+
+  // The louder sine-lookup drums must still fit under the DAC ceiling alongside a
+  // full melodic mix (6 Piano voices + all five drums keyed).
+  {
+    const core = new OpllCore(CLOCK, SR);
+    for (let ch = 0; ch < 6; ch++) { core.writeReg(0x30 + ch, 0x30); core.writeReg(0x10 + ch, 260 + ch * 8); core.writeReg(0x20 + ch, (4 << 1) | (1 << 4)); }
+    kit(core, 0x1f);
+    let p = 0; const buf = new Float32Array(8192); core.process(buf, 8192);
+    for (const v of buf) p = Math.max(p, Math.abs(v));
+    check('rhythm + 6 melodic voices stays within DAC headroom (|x| ≤ 1)', p <= 1.0, `peak ${p.toFixed(3)}`);
+  }
 
   // A silent-key rhythm render is quiet; keying every drum is clearly louder.
   const idle = drumPeak(0x00), all = drumPeak(0x1f);

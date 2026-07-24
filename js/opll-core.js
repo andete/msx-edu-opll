@@ -521,15 +521,31 @@
     return this.noiseOut;
   };
 
-  // The metallic square shared by hi-hat and cymbal: three inharmonic
-  // comparisons of the HH-operator (slot14) and Cymbal-operator (slot17) phase
-  // bits. A clean-room stand-in for the OPLL's phase-bit rhythm logic — enough to
-  // clang, not a cycle copy. Returns 0/1. (reference §9; teaching decision §7.3)
-  OpllCore.prototype.metallic = function () {
-    var h = ((this.slots[14].phase % 1) * SINE_LEN) & 0x3ff; // HH operator phase
-    var c = ((this.slots[17].phase % 1) * SINE_LEN) & 0x3ff; // Cymbal operator phase
-    function bit(x, b) { return (x >> b) & 1; }
-    return (bit(h, 8) ^ bit(h, 3)) | (bit(h, 7) ^ bit(c, 5)) | (bit(c, 7) ^ bit(c, 3));
+  // A drum operator's phase as the chip's 9-bit phase-generator output (0..511),
+  // the bit source the metallic gate and the snare read.
+  function pg9(slot) { return (((slot.phase - Math.floor(slot.phase)) * 512) | 0) & 511; }
+
+  // The hi-hat / cymbal "metallic gate": a fixed handful of phase-bit comparisons
+  // of the hi-hat (slot14) and cymbal (slot17) operators. When it flips, the two
+  // metallic drums jump between phase points on the sine table — the origin of
+  // their inharmonic clang. Returns 0/1.
+  //
+  // This gate and the drum phase constants below are the OPLL's *documented*
+  // rhythm algorithm (as captured by Okazaki's emu2413 — the behavioural
+  // reference this project follows, reference §0). Reproduced as behavioural data
+  // (like the instrument ROM), with attribution; the surrounding code is ours.
+  OpllCore.prototype.hatCymGate = function () {
+    var h = pg9(this.slots[14]), c = pg9(this.slots[17]);
+    function b(x, n) { return (x >> n) & 1; }
+    var res1 = (b(h, 2) ^ b(h, 7)) | b(h, 3);
+    var res2 = b(c, 3) ^ b(c, 5);
+    return res1 | res2;
+  };
+
+  // The metallic drums bypass the phase accumulator and address the sine table at
+  // an absolute 10-bit index; this reads one drum slot's waveform there.
+  OpllCore.prototype.drumWave = function (slot, phase10) {
+    return WAVES[slot.p.ws][phase10 & (SINE_LEN - 1)];
   };
 
   // Advance one drum slot's phase and step its envelope (isCarrier=false so a
@@ -540,48 +556,51 @@
     this.stepEnvelope(slot, ch, false);
   };
 
-  // Sum the five drums for one sample (rhythm mode only), at +3 dB.
+  // Sum the five drums for one sample (rhythm mode only), at +3 dB. Snare, hi-hat
+  // and cymbal are NOT square waves — each looks up the sine table at a phase
+  // chosen by phase bits and the noise LFSR, which is what gives them their
+  // pitched-yet-gritty character rather than a harsh buzz.
   OpllCore.prototype.rhythmSample = function () {
     this.clockNoise();
-    var metal = this.metallic();   // read both operator phases BEFORE advancing
-    var noise = this.noiseOut;
+    var gate = this.hatCymGate();     // read the operator phases BEFORE advancing
+    var noise = this.noiseReg & 1;    // 0/1
     var out = 0;
 
-    // Bass Drum: a normal 2-op FM voice on channel 7 (patch 16).
+    // Bass Drum — a plain 2-op FM voice (channel 7, patch 16).
     out += this.channelSample(6);
 
-    // Snare Drum (ch8 carrier): a square tone from the carrier phase, flipped by
-    // the noise — a pitched, gritty crack.
+    // Snare Drum (ch8 carrier) — the carrier's top phase bit picks a tone phase,
+    // the noise gates it: near-silent without noise, a ±tone crack with it.
     var sd = this.slots[15];
     if (sd.egState !== IDLE) {
-      var tone = (sd.phase % 1) < 0.5 ? 1 : -1;
-      out += (tone * noise > 0 ? 1 : -1) * 0.5 * egToGain(sd.eg + sd.tll);
+      var sdTop = (sd.phase - Math.floor(sd.phase)) >= 0.5;
+      var sdPhase = sdTop ? (noise ? 0x300 : 0x200) : (noise ? 0x100 : 0x000);
+      out += this.drumWave(sd, sdPhase) * egToGain(sd.eg + sd.tll);
       this.advanceDrum(sd, 7);
     }
 
-    // Tom-Tom (ch9 modulator): a plain pitched sine — the one tonal drum.
+    // Tom-Tom (ch9 modulator) — the one purely tonal drum: its own sine.
     var tom = this.slots[16];
     if (tom.egState !== IDLE) {
-      var wt = WAVES[tom.p.ws];
-      var ti = (((tom.phase % 1) * SINE_LEN) | 0) & (SINE_LEN - 1);
-      out += wt[ti] * egToGain(tom.eg + tom.tll);
+      var ti = ((tom.phase - Math.floor(tom.phase)) * SINE_LEN) | 0;
+      out += this.drumWave(tom, ti) * egToGain(tom.eg + tom.tll);
       this.advanceDrum(tom, 8);
     }
 
-    // Hi-Hat (ch8 modulator): the metallic square XORed with the noise — bright
-    // and hissy.
+    // Hi-Hat (ch8 modulator) — the gate + noise pick a bright, short phase point.
     var hh = this.slots[14];
     if (hh.egState !== IDLE) {
-      var hv = (metal ^ (noise > 0 ? 1 : 0)) ? 1 : -1;
-      out += hv * 0.4 * egToGain(hh.eg + hh.tll);
+      var hhPhase = gate ? (noise ? 0x2d0 : 0x234) : (noise ? 0x034 : 0x0d0);
+      out += this.drumWave(hh, hhPhase) * egToGain(hh.eg + hh.tll);
       this.advanceDrum(hh, 7);
     }
 
-    // Top Cymbal (ch9 carrier): the same metallic square, but tonal (little
-    // noise) so it rings rather than hisses.
+    // Top Cymbal (ch9 carrier) — the same gate, but tonal (no noise term): it
+    // rings rather than hisses.
     var cym = this.slots[17];
     if (cym.egState !== IDLE) {
-      out += (metal ? 1 : -1) * 0.4 * egToGain(cym.eg + cym.tll);
+      var cymPhase = gate ? 0x300 : 0x100;
+      out += this.drumWave(cym, cymPhase) * egToGain(cym.eg + cym.tll);
       this.advanceDrum(cym, 8);
     }
 
