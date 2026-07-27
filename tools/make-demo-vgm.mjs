@@ -15,9 +15,12 @@
  *     between sections, so the channel strips + register file visibly move;
  *   • it keys FM notes on and off — unlike the SCC there is no by-hand volume
  *     envelope, because the OPLL has a real ADSR per operator doing that job;
- *   • it puts the drums on the MSX PSG's noise channel — MSX-MUSIC tunes keep
- *     percussion on the AY next door, which the Tune page plays alongside the OPLL
- *     via a borrowed msx-edu-psg worklet.
+ *   • it plays the same beat on TWO different drum kits, a section at a time —
+ *     the MSX PSG's noise channel (where MSX-MUSIC tunes usually keep percussion,
+ *     so all nine FM voices stay melodic) and then the OPLL's own rhythm mode
+ *     (register 0E, five FM drums in place of channels 7-9) — and stacks both in
+ *     the last section. Hearing them back to back is the point: same pattern,
+ *     one noisy and one metallic.
  *
  * Output is VGM 1.61, declaring the YM2413 at 3 579 545 Hz (the true MSX rate,
  * which our core also runs at) and the AY-3-8910 PSG at master/2.
@@ -77,15 +80,79 @@ function key(ch, on) {
 /** Retrigger a note: key off, set the new pitch, key on (the OPLL wants the edge). */
 function noteOn(ch, midi) { key(ch, false); setPitch(ch, midi); key(ch, true); }
 
-// --- The PSG drum voice ------------------------------------------------------
-// The OPLL has its own rhythm mode, but MSX-MUSIC drivers usually run drums on
-// the PSG so all nine FM voices stay melodic — one noise channel, its amplitude
-// nudged down by hand on the interrupt. We use PSG channel A in noise-only mode.
-const drum = { vol: 0, decay: 0 };
+// --- Drum kit 1: the PSG noise channel ---------------------------------------
+// MSX-MUSIC drivers usually run drums on the PSG so all nine FM voices stay
+// melodic — one noise channel, its amplitude nudged down by hand on the
+// interrupt. We use PSG channel A in noise-only mode.
+// Note the amplitude values below are register steps, not loudness: the AY's
+// volume table is ~3 dB a step, so a hat at 6 is some 25 dB under one at 11 and
+// simply disappears next to the FM kit. Levels here are chosen against the
+// measured peak of the OPLL drums, not by counting register steps.
+const drum = { vol: 0, decay: 0, fresh: false };
 function drumHit(period, vol, decay) {
   ay(6, period & 0x1f);       // R6: noise period
   ay(8, vol & 0x0f);          // R8: channel A amplitude
-  drum.vol = vol; drum.decay = decay;
+  drum.vol = vol; drum.decay = decay; drum.fresh = true;
+}
+function psgSilence() { drum.decay = 0; drum.vol = 0; ay(8, 0); }
+
+// --- Drum kit 2: the OPLL's own rhythm mode ----------------------------------
+// Setting bit 5 of register 0E turns channels 7-9 into five fixed FM drums, each
+// keyed by its own bit of that same register — no channel key, no instrument
+// select, and no note off: a drum rings until its bit falls again. So the driver
+// holds each hit open for a few frames and then drops the bit, which is what
+// `gate` below counts. Volumes live in the nibbles of 36/37/38 (0 = loudest).
+const RHY = { BD: 0x10, SD: 0x08, TOM: 0x04, CYM: 0x02, HH: 0x01 };
+const RHY_MODE = 0x20;
+const RHY_BITS = [RHY.BD, RHY.SD, RHY.TOM, RHY.CYM, RHY.HH];
+// How many 50 Hz frames each drum's key bit stays up. Metal rings, sticks don't.
+const GATE = { [RHY.BD]: 3, [RHY.SD]: 3, [RHY.TOM]: 3, [RHY.CYM]: 6, [RHY.HH]: 2 };
+
+// The same fixed drum tuning the Rhythm page writes (js/panels/rhythm.js), so the
+// demo's kit and that page's pads are audibly one instrument.
+const DRUM_TUNE = [
+  { ch: 6, fnum: 86,  block: 3 },  // ch7 — Bass Drum
+  { ch: 7, fnum: 122, block: 4 },  // ch8 — Hi-Hat / Snare
+  { ch: 8, fnum: 80,  block: 2 },  // ch9 — Tom / Cymbal
+];
+
+const rhy = { on: false, keys: 0, gate: {} };
+
+/** One-time setup: drum pitch into 16-18/26-28, drum levels into 36/37/38. */
+function rhythmInit() {
+  for (const t of DRUM_TUNE) {
+    w(0x10 + t.ch, t.fnum & 0xff);
+    w(0x20 + t.ch, ((t.block & 7) << 1) | ((t.fnum >> 8) & 1));
+  }
+  w(0x36, 0x00);   // BD 0 (loudest)
+  w(0x37, 0x42);   // HH 4 (hi nibble) · SD 2 (lo)
+  w(0x38, 0x02);   // TOM 0 (hi) · CYM 2 (lo) — the tom is a quiet slot, give it room
+}
+
+function rhythmMode(on) {
+  if (on === rhy.on) return;
+  rhy.on = on; rhy.keys = 0; rhy.gate = {};
+  w(0x0e, on ? RHY_MODE : 0x00);
+}
+
+/** Trigger a set of drums. A bit already up is dropped first — the chip keys on
+ *  the rising edge, so a hit on a still-ringing drum needs one. */
+function rhythmHit(hits) {
+  if (!rhy.on || !hits) return;
+  if (rhy.keys & hits) { rhy.keys &= ~hits; w(0x0e, RHY_MODE | rhy.keys); }
+  rhy.keys |= hits;
+  for (const bit of RHY_BITS) if (hits & bit) rhy.gate[bit] = GATE[bit];
+  w(0x0e, RHY_MODE | rhy.keys);
+}
+
+/** Per-frame: drop the key bit of any drum whose gate has run out. */
+function rhythmTick() {
+  if (!rhy.on) return;
+  let done = 0;
+  for (const bit of RHY_BITS) {
+    if (rhy.gate[bit] > 0 && --rhy.gate[bit] === 0) done |= bit;
+  }
+  if (done & rhy.keys) { rhy.keys &= ~done; w(0x0e, RHY_MODE | rhy.keys); }
 }
 
 // --- The piece --------------------------------------------------------------
@@ -102,8 +169,11 @@ const CHORDS = [
 ];
 const ARP = [0, 1, 2, 1, 2, 1, 0, 1];
 const LEADS = [7, 2, 4, 12];   // Trumpet, Guitar, Flute, Vibraphone — one per section
+// Which kit plays each section. The beat barely changes; the chip playing it does.
+const KITS = ['psg', 'opll', 'psg', 'both'];
 
-// Voice map: ch0 bass · ch1-3 chord (Organ) · ch4 lead · drums on the PSG.
+// Voice map: ch0 bass · ch1-3 chord (Organ) · ch4 lead · ch5 unused · drums on
+// the PSG, or on ch7-9 when rhythm mode is up.
 setInstrument(0, 13, 0);       // Synth Bass, loudest
 for (let ch = 1; ch <= 3; ch++) setInstrument(ch, 8, 4);   // Organ pad, a touch back
 setInstrument(4, LEADS[0], 2); // Lead
@@ -112,12 +182,18 @@ setInstrument(4, LEADS[0], 2); // Lead
 // active-low, so a set bit disables.
 ay(7, 0x3f & ~0x08);   // 0x37
 ay(8, 0);
+rhythmInit();
 
 function tickFrame() {
-  if (drum.decay && drum.vol > 0) {
+  // The frame a hit lands on rings at its full amplitude — decaying it here,
+  // before the wait, would overwrite the attack before a single sample of it
+  // was ever emitted (and cost the drum its loudest 20 ms).
+  if (drum.fresh) drum.fresh = false;
+  else if (drum.decay && drum.vol > 0) {
     const next = Math.max(0, drum.vol - drum.decay);
     if (next !== drum.vol) { drum.vol = next; ay(8, drum.vol); }
   }
+  rhythmTick();
   frame();
 }
 
@@ -125,8 +201,14 @@ for (let section = 0; section < 4; section++) {
   setInstrument(4, LEADS[section], 2);              // swap the lead instrument
   if (section === 2) for (let ch = 1; ch <= 3; ch++) setInstrument(ch, 3, 4); // pad → Piano
 
+  const kit = KITS[section];
+  const psgKit = kit === 'psg', opllKit = kit !== 'psg', both = kit === 'both';
+  rhythmMode(opllKit);
+  if (!psgKit && !both) psgSilence();
+
   for (let bar = 0; bar < 4; bar++) {
     const chord = CHORDS[bar % CHORDS.length];
+    const fill = bar === 3;                          // tom fill closing the section
     for (let step = 0; step < 16; step++) {
       // Bass on the beat, an octave hop mid-bar.
       if (step % 4 === 0) noteOn(0, chord.root + (step === 8 ? 12 : 0));
@@ -138,20 +220,45 @@ for (let section = 0; section < 4; section++) {
         const midi = chord.notes[ARP[(step / 2) % ARP.length] % 3] + (section >= 2 ? 12 : 0);
         noteOn(4, midi);
       }
-      // PSG drums: kick on the beat, snare on the backbeat, hats on the off-beats.
-      if (step % 8 === 0) drumHit(30, 14, 2);          // kick (0, 8)
-      else if (step % 8 === 4) drumHit(7, 13, 2);      // snare (4, 12)
-      else if (step % 2 === 0) drumHit(1, 6, 3);       // hat
+      // Kit 1 — PSG noise: kick on the beat, snare on the backbeat, hats between.
+      // In a 'both' section the OPLL takes the kit and the PSG drops to offbeat
+      // sixteenths, so the two chips interlock instead of doubling each other.
+      if (psgKit) {
+        if (step % 8 === 0) drumHit(30, 14, 2);        // kick (0, 8)
+        else if (step % 8 === 4) drumHit(7, 13, 2);    // snare (4, 12)
+        else if (step % 2 === 0) drumHit(1, 11, 3);    // hat
+      } else if (both && step % 2 === 1) {
+        drumHit(1, 11, 3);                             // offbeat sixteenth hats
+      }
+
+      // Kit 2 — OPLL rhythm mode: the same beat, five FM drums keyed out of 0E.
+      // Hats layer freely here (they are their own operator slot), a crash opens
+      // the section, and the closing bar gets a tom fill the PSG cannot voice.
+      if (opllKit) {
+        let hits = 0;
+        if (fill && step >= 10 && step % 2 === 0) hits |= RHY.TOM;
+        else {
+          if (step % 8 === 0) hits |= RHY.BD;
+          else if (step % 8 === 4) hits |= RHY.SD;
+          if (step % 2 === 0) hits |= RHY.HH;
+        }
+        if (bar === 0 && step === 0) hits |= RHY.CYM;
+        rhythmHit(hits);
+      }
 
       for (let f = 0; f < STEP_FRAMES; f++) tickFrame();
     }
   }
 }
 
-// Tail: release everything and let the FM releases ring out over a few frames.
-drum.decay = 0; drum.vol = 0; ay(8, 0);
+// Tail: one last crash, then release everything and let the FM releases and the
+// cymbal ring out over a few frames before the chip goes quiet.
+psgSilence();
+rhythmHit(RHY.CYM);
 for (let ch = 0; ch < 5; ch++) key(ch, false);
-for (let i = 0; i < 30; i++) frame();
+for (let i = 0; i < 40; i++) tickFrame();
+rhythmMode(false);
+for (let i = 0; i < 10; i++) frame();
 ay(7, 0x3f);           // PSG: everything off
 cmds.push(0x66);       // end of sound data
 
@@ -199,7 +306,7 @@ const tag = gd3([
   'Joost Yervante Damad', '',                          // author, author (JP)
   '2026',                                              // release date
   'tools/make-demo-vgm.mjs',                           // ripped by
-  'An original OPLL+PSG demo, generated rather than ripped, for msx-edu-opll. MIT licensed like the rest of the project.',
+  'An original OPLL+PSG demo, generated rather than ripped, for msx-edu-opll. The drums alternate between the PSG noise channel and the OPLL rhythm mode, a section each, and stack in the last. MIT licensed like the rest of the project.',
 ]);
 
 const total = HEADER + data.length + tag.length;

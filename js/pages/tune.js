@@ -13,6 +13,7 @@ import { CLOCK } from '../opll-spec.js';
 import { readVgmFile, VgmPlayer, opllMasterClock } from '../vgm.js';
 import { Scope } from '../components/scope.js';
 import { ChannelPanel } from '../panels/channel.js';
+import { RhythmPanel } from '../panels/rhythm.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -141,6 +142,10 @@ function buildRack() {
     el.appendChild(strip);
     rack.push(new ChannelPanel(strip, store, ch));
   }
+  // The same panel the Rhythm page uses, here as a mirror of the file's 0E
+  // writes: no demo-beat button (the tune is the sequencer), and hits latched
+  // briefly because a drum keyed for three frames can fall between two paints.
+  new RhythmPanel($('rhythmPanel'), store, { beat: false, latchMs: 110 });
 }
 
 // --- Transport --------------------------------------------------------------

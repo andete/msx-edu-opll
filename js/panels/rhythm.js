@@ -45,10 +45,22 @@ const DRUM_TUNE = [
   { ch: 8, fnum: 80,  block: 2 },  // ch9 — Tom / Cymbal (tom ~150 Hz via ×5)
 ];
 
+/**
+ * Options:
+ *   beat     — show the looping demo-beat button (default true). Turn it off where
+ *              something else is already driving 0E, like a tune playing: two
+ *              sequencers writing the same register is noise, not a lesson.
+ *   latchMs  — hold a pad lit this long after its bit falls (default 0, exact).
+ *              A drum keyed for three 50 Hz frames can come and go between two
+ *              paints; the readout below the pads stays exact either way.
+ */
 export class RhythmPanel {
-  constructor(el, store) {
+  constructor(el, store, opts = {}) {
     this.el = el;
     this.store = store;
+    this.showBeat = opts.beat !== false;
+    this.latchMs = opts.latchMs || 0;
+    this.latched = {};        // drum key -> timeout id
     this.beatTimer = null;
     this.beatStep = 0;
 
@@ -76,7 +88,7 @@ export class RhythmPanel {
           </div>`).join('')}
       </div>
       <div class="rhythm-foot">
-        <button type="button" class="btn beat-btn" data-beat>▶ Demo beat</button>
+        ${this.showBeat ? '<button type="button" class="btn beat-btn" data-beat>▶ Demo beat</button>' : ''}
         <code class="rhythm-reg" data-reg>0E = 00</code>
       </div>`;
 
@@ -115,7 +127,7 @@ export class RhythmPanel {
       });
     }
 
-    this.beatEl.addEventListener('click', () => this._toggleBeat());
+    if (this.beatEl) this.beatEl.addEventListener('click', () => this._toggleBeat());
 
     this._unsub = store.subscribe((evt) => {
       if (evt.type === 'reset') { this._stopBeat(); this.refresh(); }
@@ -163,9 +175,27 @@ export class RhythmPanel {
 
   _stopBeat() {
     if (this.beatTimer) { clearInterval(this.beatTimer); this.beatTimer = null; }
+    if (!this.beatEl) return;
     if (this._rhythmOn()) this.store.set(0x0e, 1 << MODE_BIT);  // all drums off
     this.beatEl.classList.remove('playing');
     this.beatEl.textContent = '▶ Demo beat';
+  }
+
+  // Light a pad. With latchMs the lit state outlives the key bit, so a hit that
+  // opens and closes between two paints is still seen.
+  _light(d, on) {
+    const pad = this.pads[d.key];
+    if (!this.latchMs) { pad.classList.toggle('hit', on); return; }
+    if (on) {
+      pad.classList.add('hit');
+      clearTimeout(this.latched[d.key]);
+      this.latched[d.key] = setTimeout(() => {
+        this.latched[d.key] = 0;
+        if (!((this.store.get(0x0e) >> d.bit) & 1) || !this._rhythmOn()) pad.classList.remove('hit');
+      }, this.latchMs);
+    } else if (!this.latched[d.key]) {
+      pad.classList.remove('hit');
+    }
   }
 
   refresh() {
@@ -175,11 +205,15 @@ export class RhythmPanel {
     this.padsEl.classList.toggle('armed', on);
     this.regEl.textContent = `0E = ${reg.toString(16).padStart(2, '0').toUpperCase()}`;
     for (const d of DRUMS) {
-      this.pads[d.key].classList.toggle('hit', on && !!((reg >> d.bit) & 1));
+      this._light(d, on && !!((reg >> d.bit) & 1));
       const v = (this.store.get(d.vol.reg) >> d.vol.lo) & 0x0f;
       this.el.querySelector(`[data-vol="${d.key}"]`).value = v;
     }
   }
 
-  destroy() { this._stopBeat(); this._unsub && this._unsub(); }
+  destroy() {
+    this._stopBeat();
+    for (const k of Object.keys(this.latched)) clearTimeout(this.latched[k]);
+    this._unsub && this._unsub();
+  }
 }

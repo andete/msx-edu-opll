@@ -87,8 +87,10 @@ retargeted from the SCC's tune stack (copy-don't-factor).
 - [../tools/make-demo-vgm.mjs](../tools/make-demo-vgm.mjs) +
   **`../assets/demo.vgm`** — an original OPLL+PSG piece (Am–F–C–G, ~36 s), a small
   FM driver that selects ROM instruments, swaps the lead between sections, keys FM
-  notes (real ADSR — no by-hand volume writes, unlike the SCC), and puts drums on
-  the PSG noise channel. Generated (MIT), not ripped; **committed** (not
+  notes (real ADSR — no by-hand volume writes, unlike the SCC), and alternates its
+  drum kit per section: PSG noise channel · OPLL rhythm mode (0E, with the same
+  drum tuning [../js/panels/rhythm.js](../js/panels/rhythm.js) writes) · PSG ·
+  both stacked. Generated (MIT), not ripped; **committed** (not
   gitignored). Regenerate with `node tools/make-demo-vgm.mjs`.
 - [../js/shell.js](../js/shell.js) — added the `tune` PAGES entry with
   **`transport: false`**; the header Play button and play-on-edit are both
