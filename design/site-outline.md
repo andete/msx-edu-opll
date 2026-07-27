@@ -2,10 +2,10 @@
 
 Draft 2026-07-24. A first-pass structure for the interactive YM2413 (OPLL)
 teaching site. Grounded in [reference/opll-registers.md](../reference/opll-registers.md)
-and the family recipe in [msx-edu-meta/META-PLAN.md](../../msx-edu-meta/META-PLAN.md).
+and the family recipe kept outside this repo.
 
-Sibling projects: **[msx-edu-psg](../../msx-edu-psg/README.md)** (AY-3-8910) and
-**[msx-edu-scc](../../msx-edu-scc/README.md)** (Konami SCC). Same stack, same
+Sibling projects: **[msx-edu-psg](https://github.com/andete/msx-edu-psg)** (AY-3-8910) and
+**[msx-edu-scc](https://github.com/andete/msx-edu-scc)** (Konami SCC). Same stack, same
 principles, same look — but a genuinely different chip, and the outline below
 diverges wherever the OPLL's architecture calls for it.
 

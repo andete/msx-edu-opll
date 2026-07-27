@@ -5,8 +5,8 @@ Companion to [site-outline.md](site-outline.md) (structure) and
 [../reference/opll-registers.md](../reference/opll-registers.md) (the chip spec).
 
 Stack is deliberately identical to the sibling **msx-edu-scc** / **msx-edu-psg**
-projects (all inherited from **tape-peek**), per
-[../../msx-edu-meta/META-PLAN.md](../../msx-edu-meta/META-PLAN.md). Where this plan
+projects (all inherited from **tape-peek**), per the shared family recipe kept
+outside this repo. Where this plan
 says "as in the sibling projects", the intent is to reuse the *pattern*, and often
 the file, near-verbatim.
 

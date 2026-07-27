@@ -24,7 +24,7 @@ No install, nothing to build — the hosted version runs in any modern browser.
 > **VGM** recording straight through the chip model — its `0x51` writes flow into
 > the register file exactly as a slider's would, lighting every widget, while the
 > **PSG drum track** (`0xA0`) is forwarded to a borrowed
-> [msx-edu-psg](../msx-edu-psg/README.md) worklet and played alongside. No emulator
+> [msx-edu-psg](https://github.com/andete/msx-edu-psg) worklet and played alongside. No emulator
 > anywhere: the audio is our own `opll-core.js` + `psg-core.js`. Everything is
 > two-way bound to the write-only register file; the DSP core is guarded by
 > `node tools/verify-core.mjs` (**52 checks**).
@@ -35,11 +35,10 @@ the two FM operators with their log-sin/exp cores, the per-operator ADSR envelop
 the instrument ROM, rhythm mode and the 9-bit DAC — as things you can change while
 it plays.
 
-Part of the **msx-edu-\*** family; the shared recipe lives in
-**[msx-edu-meta](../msx-edu-meta/META-PLAN.md)**:
+Part of the **msx-edu-\*** family, three sites built to the same recipe:
 
-- **[msx-edu-psg](../msx-edu-psg/README.md)** — the MSX1 AY-3-8910 PSG.
-- **[msx-edu-scc](../msx-edu-scc/README.md)** — the Konami SCC wavetable chip.
+- **[msx-edu-psg](https://github.com/andete/msx-edu-psg)** — the MSX1 AY-3-8910 PSG.
+- **[msx-edu-scc](https://github.com/andete/msx-edu-scc)** — the Konami SCC wavetable chip.
 - **msx-edu-opll** — *this repo*, the FM chip of MSX-MUSIC.
 
 ## What makes the OPLL interesting
@@ -62,8 +61,7 @@ Part of the **msx-edu-\*** family; the shared recipe lives in
   Yamaha's application manual and cross-checked against emu2413 / openMSX.
 - [design/site-outline.md](design/site-outline.md) — the intended site structure
   (the chain of focus pages, the sandbox, the widget toolbox).
-- [design/build-plan.md](design/build-plan.md) — the phased implementation plan,
-  following the [meta-plan](../msx-edu-meta/META-PLAN.md).
+- [design/build-plan.md](design/build-plan.md) — the phased implementation plan.
 - [docs/SOURCES.md](docs/SOURCES.md) — the cached references (not committed; run
   [docs/fetch.sh](docs/fetch.sh) to populate them locally).
 

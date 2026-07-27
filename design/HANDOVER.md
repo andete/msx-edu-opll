@@ -5,8 +5,8 @@ feature. The site is now **complete** against the build plan. Read this first,
 then [build-plan.md](build-plan.md) (the spec) and
 [../reference/opll-registers.md](../reference/opll-registers.md) (the chip truth).
 This project teaches the Yamaha **YM2413 (OPLL)** FM chip as a static, no-build web
-app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, family recipe in
-[../../msx-edu-meta/META-PLAN.md](../../msx-edu-meta/META-PLAN.md).
+app; siblings are `../msx-edu-psg` and `../msx-edu-scc`, built to a shared family
+recipe kept outside this repo.
 
 ## Where things stand
 
