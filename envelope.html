@@ -34,6 +34,10 @@
 
     <div class="scope-wrap viz-adsr"><canvas id="adsr" class="scope adsr-canvas" aria-label="ADSR envelope"></canvas></div>
 
+    <!-- The keyboard drives this page, so it sits under the curve it moves
+         rather than at the foot of the shared tool strip. -->
+    <div data-shell-keyboard></div>
+
     <div class="panels">
       <div id="operator"></div>
     </div>
@@ -46,6 +50,15 @@
         <b>Key Scaling of Rate</b> (KSR) makes higher notes run their envelopes
         faster, the way a real string's high notes decay quicker than its low ones.
         Press a high key and a low one and watch the attack speed differ.
+      </p>
+      <p>
+        <b>Slow release (channel SUS)</b> is the odd one out: every other control
+        here belongs to the instrument, but SUS is a bit in the channel's own
+        register (<code>2x</code> bit&nbsp;5), so it applies to whatever patch the
+        channel is playing. It does nothing while a key is held — it only takes
+        over at <b>Key-Off</b>, where the note releases at one fixed slow rate and
+        the operator's <b>RR</b> is ignored. Tick it and the <b>R</b> segment above
+        redraws to the rate it will actually use.
       </p>
     </div>
 

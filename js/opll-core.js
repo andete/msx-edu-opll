@@ -721,13 +721,19 @@
     mod.phase = save.mp; mod.out = save.mo; mod.prev = save.mpv; mod.egState = save.ms; mod.eg = save.me;
     car.phase = save.cp; car.out = save.co; car.prev = save.cpv; car.egState = save.cs; car.eg = save.ce;
     this.amPhase = save.am; this.pmPhase = save.pm;
-    return { modulator: modArr, carrier: carArr, phaseOffset: offArr, carrierClean: cleanArr };
+    // carInc/modInc are cycles per sample: with them a view can reconstruct the
+    // phase each sample walks through, not just the amplitude it came out at.
+    return {
+      modulator: modArr, carrier: carArr, phaseOffset: offArr, carrierClean: cleanArr,
+      carInc: car.inc, modInc: mod.inc
+    };
   };
 
   OpllCore.prototype.snapshot = function (ch) {
     var mod = this.mod(ch), car = this.car(ch);
     return {
       keyOn: this.keyOn[ch],
+      sus: this.sus[ch],          // channel SUS: key-off releases at a fixed rate
       fnum: this.fnum[ch], block: this.block[ch],
       inst: this.inst[ch], vol: this.vol[ch],
       mod: { eg: mod.eg, state: mod.egState, out: mod.out },

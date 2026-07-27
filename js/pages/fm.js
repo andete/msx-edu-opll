@@ -1,13 +1,20 @@
 // pages/fm.js — stage 3 ★: the modulator, and phase modulation itself.
 //
-// Now the modulator is audible and warps the carrier's phase. The ★ operator
-// pair shows the modulator → FM link → carrier, and the harmonic bars show what
-// FM does to the carrier's timbre, live. The star page of the site.
+// Now the modulator is audible and warps the carrier's phase. The ★ phase wheel
+// shows the mechanism sample by sample, and the harmonic bars show what FM does
+// to the carrier's timbre, live. The star page of the site.
+//
+// The operator-pair widget used to sit here too, but the wheel took over
+// everything it showed on this page — the modulator's wave, the carrier's, the
+// bare sine underneath, the injected phase — and showed it better, so the page
+// carried two views of one idea. It still earns its place on Explore, where the
+// block diagram is the point; here the controls moved up into the space instead,
+// because reaching them meant scrolling the wheel off screen.
 
 import { store } from '../store.js';
 import { mountShell } from '../shell.js';
 import { startVizLoop } from '../loop.js';
-import { OperatorPair } from '../components/operator-pair.js';
+import { PhaseWheel } from '../components/phase-wheel.js';
 import { Harmonics } from '../components/harmonics.js';
 import { OperatorPanel } from '../panels/operator.js';
 import { createChallenges } from '../components/challenge.js';
@@ -27,6 +34,8 @@ const a4 = midiToFnumBlock(69);
 store.setFnum(CH, a4.fnum); store.setBlock(CH, a4.block);
 store.keyOn(CH, true);   // keyed on at seed, so the header Play sounds at once
 
+// The keyboard is hosted by the page (see fm.html), right under the controls, so
+// retriggering a note does not mean scrolling the wheel out of sight.
 mountShell('fm', { keyboard: 'focus', octaves: 3 });
 
 new OperatorPanel(document.getElementById('operator-mod'), store, 'mod', CH);
@@ -46,6 +55,12 @@ createChallenges(document.getElementById('challenges'), [
     test: () => (store.get(0x03) & 0x07) >= 4,
   },
   {
+    id: 'silence-mod',
+    task: 'Watch the mechanism stop: set the modulator\'s <b>Total Level</b> to 63. The two hands on the wheel close up onto each other, and the carrier goes back to a plain sine.',
+    hint: 'TL 63 is the quietest the modulator goes — about 47 dB down, so it has almost nothing left to add to the phase.',
+    test: () => (store.get(0x02) & 0x3f) === 63,
+  },
+  {
     id: 'clang',
     task: 'Make it <b>clangy</b>: an off-ratio modulator — Multiple ×3 or higher against the ×1 carrier.',
     hint: 'Inharmonic ratios push energy onto non-harmonic partials.',
@@ -53,13 +68,15 @@ createChallenges(document.getElementById('challenges'), [
   },
 ]);
 
-const pair = new OperatorPair(document.getElementById('pair'));
+const wheel = new PhaseWheel(document.getElementById('wheel'));
 const harmonics = new Harmonics(document.getElementById('harmonics'));
-startVizLoop((viz) => {
+startVizLoop((viz, dt) => {
   const data = viz.renderPair(2048, CH);
   const snap = viz.snapshot(CH);
   const fb = viz.effectivePatch(CH).mod.fb;
-  pair.draw(data, { fb, show: 640 });
+  // renderPair restarts from phase 0 every call, so the window is stable frame to
+  // frame for a fixed patch — the wheel can keep its own slow clock across it.
+  wheel.draw(data, dt, { fb });
   const f0 = fnumBlockToFreq(snap.fnum, snap.block) / viz.sampleRate;
   harmonics.set(data.carrier, f0);
 });

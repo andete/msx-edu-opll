@@ -33,7 +33,9 @@ store.keyOn(CH, true);   // keyed on at seed, so the header Play sounds at once
 mountShell('tone', { keyboard: 'focus', octaves: 3 });
 
 new PitchPanel(document.getElementById('pitch'), store, CH);
-new OperatorPanel(document.getElementById('operator'), store, 'car', CH);
+// Multiple only: the envelope is stage 2 and the half-sine wave is stage 3, so
+// neither belongs on the panel yet. The seeded registers keep the tone steady.
+new OperatorPanel(document.getElementById('operator'), store, 'car', CH, { wave: false, envelope: false });
 
 const freqEl = document.querySelector('[data-freq]');
 

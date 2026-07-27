@@ -94,5 +94,5 @@ startVizLoop((viz) => {
   const f0 = fnumBlockToFreq(snap.fnum, snap.block) / viz.sampleRate;
   harmonics.set(data.carrier, f0);
 
-  adsr.draw(viz.effectivePatch(ch).car, snap.car);
+  adsr.draw(viz.effectivePatch(ch).car, { ...snap.car, sus: snap.sus });
 });

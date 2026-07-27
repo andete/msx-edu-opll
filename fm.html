@@ -24,20 +24,62 @@
       That is <b>phase modulation</b>, the OPLL's kind of FM.
     </p>
     <p class="page-intro">
-      The ★ view below shows the <b>modulator</b>, the <b>FM link</b> (its
-      thickness is the modulation depth), and the resulting <b>carrier</b>. Turn
-      on <b>show internals</b> to see the bare carrier sine with the phase the
-      modulator injects. Raise the modulator's <b>Total Level</b> for more depth,
-      set a <b>Multiple</b> ratio (try 2:1 for a bell), and add <b>feedback</b>
-      for the modulator's characteristic edge. The harmonic bars move as you go.
+      The <b>phase wheel</b> below is that idea, slowed down about 1800× so you
+      can watch it happen. Everything on it is drawn twice, and the difference
+      between the two is the whole effect: the <b>pale hand</b> turns at a
+      perfectly steady rate, where the carrier would be if nothing touched it,
+      while the <b>bright hand</b> is where the modulator has shoved it. The same
+      pairing runs along the traces — the dashed pale wave is the plain sine that
+      would have come out, the bright one is what actually does.
     </p>
 
-    <div id="pair" class="scope-wrap"></div>
+    <div id="wheel" class="scope-wrap"></div>
+
+    <p class="page-intro">
+      The controls are right underneath, because every one of them changes what
+      the wheel is doing. Raise the modulator's <b>Total Level</b> for more depth,
+      set a <b>Multiple</b> ratio (try 2:1 for a bell), and add <b>feedback</b>
+      for the modulator's characteristic edge. The harmonic bars further down move
+      as you go.
+    </p>
+
+    <!-- Carrier first, to sit under the wheel it drives; the modulator's panel
+         lines up with the modulator strip further right. The other two-operator
+         pages keep the signal order (modulator → carrier), because there the
+         operator-pair diagram above them is laid out that way. -->
+    <div class="panels">
+      <div id="operator-car"></div>
+      <div id="operator-mod"></div>
+    </div>
+
+    <!-- The keyboard drives the wheel, so it stays within reach of it. -->
+    <div data-shell-keyboard></div>
+
     <div class="scope-wrap"><canvas id="harmonics" class="scope" aria-label="Carrier harmonics"></canvas></div>
 
-    <div class="panels">
-      <div id="operator-mod"></div>
-      <div id="operator-car"></div>
+    <div class="note-box">
+      <h3>The whole mechanism, in three lines</h3>
+      <p>
+        Everything on this page is these three steps, run once per sample. Each
+        operator keeps a <b>phase</b> — a position in the sine table, counted in
+        cycles — and a fixed <b>increment</b> it adds every sample, which is what
+        sets its pitch:
+      </p>
+      <p>
+        <code>modPhase += modInc</code> &nbsp;·&nbsp;
+        <code>mod = wave[modPhase]</code> &nbsp;·&nbsp;
+        <code>out = wave[carPhase + <b>depth·mod</b>]</code>
+      </p>
+      <p>
+        That bolded term is the entire idea: the modulator's <em>output</em> is
+        added to the carrier's <em>phase</em> before the table is read. Nothing
+        changes the carrier's increment, so its pitch never moves — only where in
+        the table it lands. A full-scale modulator shifts the carrier by about
+        four cycles, which is why a low <b>Total Level</b> warps the wave so
+        violently; the readout under the wheel prints that shift in turns, so
+        anything past <code>1.000</code> is the carrier being sent more than the
+        whole way round the table between one sample and the next.
+      </p>
     </div>
 
     <div class="note-box">
@@ -48,7 +90,9 @@
         is pitched and musical: a 2:1 ratio gives a hollow, bell-like tone.
         Off-ratio settings push energy onto inharmonic partials and the voice turns
         metallic or clangy. <b>Feedback</b> routes the modulator into itself, an
-        extra layer of warping that adds bite as you raise it.
+        extra layer of warping that adds bite as you raise it — it has no trace of
+        its own on the wheel, because it is already folded into the modulator's
+        output, so the strip just names it.
       </p>
     </div>
 

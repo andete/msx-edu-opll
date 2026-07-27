@@ -139,6 +139,28 @@ h1 { font-size: 1.25rem; margin: 0; letter-spacing: -0.01em; }
 .pair-canvas { display: block; width: 100%; height: 250px; background: var(--scope-bg); }
 @media (max-width: 720px) { .pair-canvas { height: 200px; } }
 
+/* --- Phase wheel (the FM mechanism, in slow motion) --------------------- */
+.wheel-wrap { display: block; }
+.wheel-controls { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; }
+.wheel-rate { font-size: 0.72rem; color: var(--text-faint); font-family: var(--mono); }
+.wheel-canvas { display: block; width: 100%; height: 260px; background: var(--scope-bg); }
+.wheel-readout {
+  font-family: var(--mono); font-size: 0.78rem; color: var(--text-dim);
+  background: var(--bg-panel); border-top: 1px solid var(--border);
+  padding: 0.45rem 0.8rem; display: flex; gap: 0.4rem 1.6rem;
+  flex-wrap: wrap; align-items: baseline;
+}
+.wheel-readout b { color: var(--text); font-weight: 650; }
+.wheel-readout > span { white-space: nowrap; }
+.wheel-pale { color: var(--text-faint); }
+.wheel-pale b { color: var(--text-dim); }
+.wheel-verb { color: var(--mod); margin-left: auto; }
+/* The verb is the one part whose text changes length as the modulator swings.
+   Reserving the widest option ("lingering behind") keeps the row from re-wrapping
+   and the bar from growing a line and snapping back. */
+.wheel-slot { display: inline-block; min-width: 17ch; }
+@media (max-width: 720px) { .wheel-canvas { height: 300px; } }
+
 /* --- Panels ------------------------------------------------------------- */
 .panels {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -210,6 +232,19 @@ kbd {
 }
 .pkey-black.pressed { background: linear-gradient(var(--accent-strong), var(--accent)); }
 .pkey-label { font-size: 0.6rem; color: var(--text-faint); pointer-events: none; padding-bottom: 3px; }
+
+/* A page-hosted keyboard (the `[data-shell-keyboard]` slot). On pages you play
+   rather than read, the keys are the primary control, so they get a frame of
+   their own and more height instead of sitting at the foot of the tool strip. */
+.keys-stage {
+  margin: 0.2rem 0 1.2rem;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-top: 3px solid var(--accent); border-radius: 12px;
+  padding: 0.2rem 1rem 1rem; box-shadow: var(--shadow);
+}
+.keys-stage .tools-hint { max-width: none; }
+.keys-stage .piano-board { height: 150px; }
+.keys-stage .pkey-label { font-size: 0.66rem; }
 
 /* --- Register inspector ------------------------------------------------- */
 .reg-section { margin-top: 1.4rem; }

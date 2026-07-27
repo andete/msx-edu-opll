@@ -30,7 +30,9 @@ store.keyOn(CH, true);   // keyed on at seed, so the header Play sounds at once
 
 mountShell('envelope', { keyboard: 'focus', octaves: 3 });
 
-new OperatorPanel(document.getElementById('operator'), store, 'car', CH);
+// ADSR only: this page is about amplitude over time, so Multiple and the
+// half-sine wave — both timbre — would only distract from the curve.
+new OperatorPanel(document.getElementById('operator'), store, 'car', CH, { timbre: false });
 
 createChallenges(document.getElementById('challenges'), [
   {
@@ -56,5 +58,7 @@ createChallenges(document.getElementById('challenges'), [
 const adsr = new AdsrView(document.getElementById('adsr'));
 startVizLoop((viz) => {
   const snap = viz.snapshot(CH);
-  adsr.draw(viz.effectivePatch(CH).car, snap.car);
+  // SUS is a channel register, not part of the patch, so it rides along with the
+  // live envelope: the view redraws the release segment when it is set.
+  adsr.draw(viz.effectivePatch(CH).car, { ...snap.car, sus: snap.sus });
 });

@@ -1,0 +1,82 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ADSR playhead probe</title>
+<style>body{background:#08201f;color:#aef2ee;font:13px ui-monospace,monospace}
+canvas{--scope-bg:#08201f;--scope-grid:rgba(255,255,255,0.07);--scope-line:#43cfc7;--text-faint:#7f9391;--danger:#b5473a;
+width:600px;height:180px;display:block}
+pre{white-space:pre-wrap}</style></head>
+<body>
+<canvas id="c" width="600" height="180"></canvas>
+<pre id="out">running…</pre>
+<script type="module">
+// Does the playhead land ON the drawn outline? Draw one state at a time, then
+// check the dot's column: dot and line merge into a single run when it does.
+import { AdsrView } from '../js/components/adsr-view.js';
+const view = new AdsrView(document.getElementById('c'));
+const ctx = document.getElementById('c').getContext('2d');
+
+const grab = () => {
+  const { width: W, height: H } = ctx.canvas;
+  return { W, H, d: ctx.getImageData(0, 0, W, H).data };
+};
+const isLit = (img, x, y) => {
+  const i = (y * img.W + x) * 4;
+  return img.d[i + 1] > 120 && img.d[i + 2] > 110;
+};
+
+// Locate the dot by diffing "outline only" against "outline + playhead", then
+// measure how far it sits from the nearest outline pixel in its own column.
+function offCurve(env, live) {
+  // IDLE draws no playhead, but still carries the channel SUS bit — which shapes
+  // the release segment — so both renders share one outline.
+  view.draw(env, { state: IDLE, sus: live.sus });
+  const bare = grab();
+  view.draw(env, live);
+  const withDot = grab();
+  // The state name is drawn only when there is a playhead, so it shows up in the
+  // diff too — skip the top-left box it occupies.
+  const dpr = bare.W / 600;
+  const labelW = 90 * dpr, labelH = 24 * dpr;
+  let sx = 0, sy = 0, n = 0;
+  for (let y = 0; y < bare.H; y++) {
+    for (let x = 0; x < bare.W; x++) {
+      if (x < labelW && y < labelH) continue;
+      if (isLit(withDot, x, y) && !isLit(bare, x, y)) { sx += x; sy += y; n++; }
+    }
+  }
+  if (!n) return 'no dot';
+  const cx = Math.round(sx / n), cy = Math.round(sy / n);
+  let nearest = Infinity;
+  for (let y = 0; y < bare.H; y++) if (isLit(bare, cx, y)) nearest = Math.min(nearest, Math.abs(y - cy));
+  if (!isFinite(nearest)) return `OFF — no outline at x=${cx}`;
+  return nearest <= 2 ? `on-curve (x=${cx}, Δ${nearest}px)` : `OFF by ${nearest}px (x=${cx})`;
+}
+
+const RELEASE = 4, SUSTAIN = 3, DECAY = 2, ATTACK = 1, IDLE = 5;
+const lines = [];
+for (const [name, env] of [
+  ['sustained sl=5', { ar: 8, dr: 4, sl: 5, rr: 3, eg: 1 }],
+  ['sustained sl=0', { ar: 8, dr: 4, sl: 0, rr: 3, eg: 1 }],
+  ['percussive sl=5', { ar: 15, dr: 6, sl: 5, rr: 10, eg: 0 }],
+  ['sus-slow sl=5', { ar: 8, dr: 4, sl: 5, rr: 15, eg: 1, __sus: 1 }],
+]) {
+  for (const [label, live] of [
+    ['attack  eg=60', { state: ATTACK, eg: 60 }],
+    // the decay cannot run past the sustain level, so clamp the probe to a
+    // level the core could actually be at (sl 0 means it never leaves 0)
+    ['decay        ', { state: DECAY, eg: Math.min(20, env.sl * 8) }],
+    ['tail    eg=45', { state: env.eg ? RELEASE : SUSTAIN, eg: 45 }],
+    ['tail    eg=80', { state: env.eg ? RELEASE : SUSTAIN, eg: 80 }],
+    ['tail   eg=110', { state: env.eg ? RELEASE : SUSTAIN, eg: 110 }],
+    // A key released before the decay reached the sustain level starts its fall
+    // above the drawn tail. The dot is pinned to the tail's start and stays at
+    // its true height, so it reads OFF here — expected, and the check's teeth.
+    ['early release ', { state: RELEASE, eg: 4 }],
+  ]) {
+    // SUS is a channel bit, so it reaches the view on the live snapshot
+    lines.push(`${name.padEnd(16)} ${label}  →  ${offCurve(env, { ...live, sus: env.__sus })}`);
+  }
+}
+document.getElementById('out').textContent = lines.join('\n');
+window.__result = lines.join('\n');
+</script>
+</body></html>
