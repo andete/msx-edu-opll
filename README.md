@@ -5,6 +5,10 @@ An interactive tour of the Yamaha **YM2413 (OPLL)**, the 2-operator FM chip behi
 two operators modulate each other, shape an ADSR envelope, pick from the 15 ROM
 instruments or build your own, and hear the result, all in the browser.
 
+### ▶ Play it live: **<https://damad.be/joost/msx-edu-opll/>**
+
+No install, nothing to build — the hosted version runs in any modern browser.
+
 > **Status: complete.** All eight build phases plus the VGM tune player are done.
 > The site is a landing page whose hero is the clickable, live **signal-path
 > diagram**, and the seven-stage chain [Tone](tone.html) → [Envelope](envelope.html)
