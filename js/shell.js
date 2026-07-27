@@ -163,11 +163,13 @@ function footerHTML() {
     <p>A clean-room teaching model of the YM2413 — behaviour from the docs, not
       ported from an emulator.</p>
     <p class="footer-links">
+      <a href="https://damad.be/joost/">← damad.be/joost</a>
+      <span class="footer-sep">·</span>
       <a href="https://github.com/andete/msx-edu-opll">source on GitHub</a>
       <span class="footer-sep">·</span>
-      <a href="../msx-edu-psg/">PSG Playground ↗</a>
+      <a href="https://damad.be/joost/msx-edu-psg/">PSG Playground ↗</a>
       <span class="footer-sep">·</span>
-      <a href="../msx-edu-scc/">SCC Playground ↗</a>
+      <a href="https://damad.be/joost/msx-edu-scc/">SCC Playground ↗</a>
       <span class="footer-sep">·</span>
       MIT © 2026 Joost Yervante Damad
     </p>`;
@@ -221,6 +223,8 @@ function chainDotsHTML(current) {
  *              'poly'  → a polyphonic allocator (default); { channels: N }
  *              limits it to channels 0..N-1 (the Rhythm page uses 6 melodic).
  *   toolsHint, memIntro: override the default copy.
+ * A page can also pull the keyboard out of the bottom strip and up next to its
+ * own widget by putting a `[data-shell-keyboard]` element in its markup.
  * @returns {{ page, regs: RegisterInspector|null, voices: object|null }}
  */
 export function mountShell(pageId, opts = {}) {
@@ -296,14 +300,15 @@ function mountTools(mount, page, opts) {
        chords work, since the voices are independent. Keys sound <b>while held</b>;
        key-up is the only note-off the OPLL has.`;
 
-  mount.innerHTML = `
+  const keysHTML = `
     <p class="tools-hint">
       ${hint} Use the mouse, or the computer keys printed on them
       (<kbd>Z</kbd><kbd>S</kbd><kbd>X</kbd>…<kbd>M</kbd>), an octave laid out the
       way an MSX keyboard does it.
     </p>
-    <div data-piano class="piano-mount" aria-label="Playable keyboard"></div>
+    <div data-piano class="piano-mount" aria-label="Playable keyboard"></div>`;
 
+  const regsHTML = `
     <details class="reg-details">
       <summary>Register file${page?.addrs && page.addrs !== '—' ? ` — this page is <code>${page.addrs}</code>` : ''}</summary>
       <p class="reg-intro">${opts.memIntro || `
@@ -313,6 +318,20 @@ function mountTools(mount, page, opts) {
       </p>
       <div data-regs></div>
     </details>`;
+
+  // A page whose whole point is "hold a key and watch" can host the keyboard
+  // itself, next to the widget it drives, instead of leaving it at the bottom
+  // of the tool strip. It declares a `[data-shell-keyboard]` slot; the register
+  // file stays down in the strip either way.
+  const keysHost = document.querySelector('[data-shell-keyboard]');
+  if (keysHost) {
+    keysHost.className = 'keys-stage';
+    keysHost.innerHTML = keysHTML;
+    mount.innerHTML = regsHTML;
+  } else {
+    mount.innerHTML = keysHTML + regsHTML;
+  }
+  const keysRoot = keysHost || mount;
 
   let voices = null, onNoteOn, onNoteOff;
   if (isFocus) {
@@ -340,7 +359,7 @@ function mountTools(mount, page, opts) {
     onNoteOn = (midi) => voices.noteOn(midi);
     onNoteOff = (midi) => voices.noteOff(midi);
   }
-  new Piano(mount.querySelector('[data-piano]'), {
+  new Piano(keysRoot.querySelector('[data-piano]'), {
     base: 48, octaves: opts.octaves ?? 3,
     onNoteOn: async (midi) => { onNoteOn(midi); await play(); },
     onNoteOff,
